@@ -48,6 +48,11 @@ class Graves
     @armor_pen += diff * 0.5
   end
 
+  def effective_health
+    damage_multi = 100 / (100 + @armor).to_f
+    @hp / damage_multi
+  end
+
   def attack_speed
     @base_attack_speed + (@base_attack_speed * @bonus_attack_speed / 100.to_f)
   end
@@ -95,7 +100,7 @@ graves = Graves.new
 ad1 = 9.85
 ad2 = [14.35, 9.85, 6.75, 0] #[6.75, 2.25, 0, 14.35, 7.6, 7.6, 0]
 apen1 = 0
-apen2 = [0, 7.68, 10.24, 17.92]#[10.24, 10.24, 10.24, 0, 0, 7.68, 7.68]
+apen2 = [0, 7.68, 10.24, 17.92] #[10.24, 10.24, 10.24, 0, 0, 7.68, 7.68]
 atksped1 = 9
 atksped2 =[0, 0, 0, 0] #[0, 9, 13.5, 0, 13.5, 0 , 13.6]
 
@@ -105,23 +110,34 @@ atksped2 =[0, 0, 0, 0] #[0, 9, 13.5, 0, 13.5, 0 , 13.6]
 # graves.level = 1
 # puts graves.armor_pen
 
-ad2.zip(apen2, atksped2).each do |ad2, apen2, atksped2|
-  diffs = graves.get_damage_diff ad1, ad2, apen1, apen2, atksped1, atksped2
-  print diffs[-1].round(2)
-  print " "
+# ad2.zip(apen2, atksped2).each do |ad2, apen2, atksped2|
+#   diffs = graves.get_damage_diff ad1, ad2, apen1, apen2, atksped1, atksped2
+#   print diffs[-1].round(2)
+#   print " "
+#
+#   graves.level = 6
+#   graves.armor_pen += 10
+#   diffs = graves.get_damage_diff ad1, ad2, apen1, apen2, atksped1, atksped2
+#   print diffs[-1].round(2)
+#   print " "
+#
+#   graves.level = 15
+#   graves.armor_pen += 20
+#   diffs = graves.get_damage_diff ad1, ad2, apen1, apen2, atksped1, atksped2
+#   print diffs[-1].round(2)
+#   print " "
+#   graves.armor_pen -= 30
+#
+#   puts ""
+# end
 
-  graves.level = 6
-  graves.armor_pen += 10
-  diffs = graves.get_damage_diff ad1, ad2, apen1, apen2, atksped1, atksped2
-  print diffs[-1].round(2)
-  print " "
+graves1 = Graves.new
+graves1.armor += 9
+graves2 = Graves.new
+graves2.hp += 72
 
-  graves.level = 15
-  graves.armor_pen += 20
-  diffs = graves.get_damage_diff ad1, ad2, apen1, apen2, atksped1, atksped2
-  print diffs[-1].round(2)
-  print " "
-  graves.armor_pen -= 30
-
-  puts ""
+(1..18).each do |numb|
+  graves1.level = numb
+  graves2.level = numb
+  puts "#{numb}: #{graves1.effective_health.round(2) - graves2.effective_health.round(2)}"
 end
