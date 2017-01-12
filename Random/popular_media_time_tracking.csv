@@ -1,0 +1,116 @@
+Date,Client,Project,Notes,Hours,First name,Last name
+10/17/2016,-,Popular Media,#64 Research feature flagging,4.0100,Andrew,Ma
+09/20/2016,-,Popular Media,#20  Create front end receiver for background job worker,3.7833,Philip,Ross
+09/26/2016,-,Popular Media,#20  Create front end receiver for background job worker,8.0614,Philip,Ross
+09/26/2016,-,Popular Media,#36 Mock up signup page,1.4944,Jeremy,Wright
+01/04/2017,-,Popular Media,#72 Add Akkurat font styling to Ember,0.5000,Luke,Miller
+01/10/2017,-,Popular Media,#72 Add Akkurat font styling to Ember,0.0167,Luke,Miller
+11/11/2016,-,Popular Media,#77 use ember exam for tests,1.0000,Philip,Ross
+12/10/2016,-,Popular Media,#83 Integrate Google Vision tagging script with Rails backend and background worker,0.5000,Jeremy,Wright
+01/10/2017,-,Popular Media,#83 Integrate Google Vision tagging script with Rails backend and background worker,0.5036,Philip,Ross
+09/14/2016,-,Popular Media,#17 Fix Gemfile,0.0489,Philip,Ross
+10/03/2016,-,Popular Media,#47 Install bcrypt and encrypt password on submit for registration and login,2.2083,Jeremy,Wright
+12/19/2016,-,Popular Media,#75 Route to dashboard page on successful login or register,1.5500,Luke,Miller
+01/10/2017,-,Popular Media,#75 Route to dashboard page on successful login or register,2.0067,Luke,Miller
+01/10/2017,-,Popular Media,#75 Route to dashboard page on successful login or register,0.2361,Philip,Ross
+01/11/2017,-,Popular Media,#75 Route to dashboard page on successful login or register,2.8678,Philip,Ross
+01/12/2017,-,Popular Media,#75 Route to dashboard page on successful login or register,0.3333,Philip,Ross
+09/19/2016,-,Popular Media,#16 Research testing frameworks for Ember,2.8664,Andrew,Ma
+09/20/2016,-,Popular Media,#16 Research testing frameworks for Ember,0.9025,Andrew,Ma
+09/15/2016,-,Popular Media,#21 Create backend framework for background worker job,2.4558,Philip,Ross
+09/26/2016,-,Popular Media,#21 Create backend framework for background worker job,10.5167,Philip,Ross
+10/03/2016,-,Popular Media,#21 Create backend framework for background worker job,5.0889,Philip,Ross
+10/05/2016,-,Popular Media,#21 Create backend framework for background worker job,0.6667,Philip,Ross
+10/06/2016,-,Popular Media,#21 Create backend framework for background worker job,1.0167,Philip,Ross
+09/15/2016,-,Popular Media,#22 Add config support for Bash on Ubuntu on Windows,0.1319,Philip,Ross
+09/22/2016,-,Popular Media,#24 Build form for logging in,0.4469,Luke,Miller
+09/22/2016,-,Popular Media,#23 Route page for logging in,0.3019,Luke,Miller
+10/03/2016,-,Popular Media,#25 Setup minimum password requirements on registration from client,0.1239,Jeremy,Wright
+09/21/2016,-,Popular Media,#26 Route page for registration,0.9917,Andrew,Ma
+09/21/2016,-,Popular Media,#27 Create form for registering users,0.0983,Andrew,Ma
+09/28/2016,-,Popular Media,#30 Setup Mutation testing for rails,6.1806,Philip,Ross
+09/30/2016,-,Popular Media,#30 Setup Mutation testing for rails,3.7336,Philip,Ross
+09/30/2016,-,Popular Media,#34 Create routes for all pages,0.1031,Andrew,Ma
+09/28/2016,-,Popular Media,#35 Create static navigational bar for all pages,5.1153,Andrew,Ma
+10/09/2016,-,Popular Media,#44 Create rails model objects,27.8036,Andrew,Ma
+09/30/2016,-,Popular Media,#45 Create registration and login endpoints,0.5039,Andrew,Ma
+09/23/2016,-,Popular Media,#49 Add Git Hook to prevent pushing to master,0.5167,Philip,Ross
+09/25/2016,-,Popular Media,#49 Add Git Hook to prevent pushing to master,0.0167,Philip,Ross
+10/08/2016,-,Popular Media,#48 Registration endpoint call to Popular Pays API,4.5686,Andrew,Ma
+10/09/2016,-,Popular Media,#48 Registration endpoint call to Popular Pays API,2.4639,Andrew,Ma
+10/10/2016,-,Popular Media,#48 Registration endpoint call to Popular Pays API,3.6319,Andrew,Ma
+10/11/2016,-,Popular Media,#48 Registration endpoint call to Popular Pays API,9.4469,Andrew,Ma
+10/10/2016,-,Popular Media,#49 Login endpoint call to Popular Pays API,1.1936,Andrew,Ma
+10/10/2016,-,Popular Media,#50 Find guide to handle git merge conflicts and rebasing and link to guide,0.1572,Philip,Ross
+10/17/2016,-,Popular Media,#53 Create image model object on Rails,1.8747,Philip,Ross
+10/19/2016,-,Popular Media,#54 Add styling to login page,6.3011,Andrew,Ma
+10/20/2016,-,Popular Media,#54 Add styling to login page,3.1525,Andrew,Ma
+10/22/2016,-,Popular Media,#54 Add styling to login page,2.0167,Andrew,Ma
+10/27/2016,-,Popular Media,#55 Add styling to registration page,2.5372,Andrew,Ma
+10/29/2016,-,Popular Media,#55 Add styling to registration page,7.4339,Andrew,Ma
+10/11/2016,-,Popular Media,#56 Create file with colors,0.1928,Jeremy,Wright
+10/04/2016,-,Popular Media,#57 Vendorize mutant gem,0.8911,Philip,Ross
+10/05/2016,-,Popular Media,#59 Update Gemfile.lock,0.0375,Philip,Ross
+12/09/2016,-,Popular Media,"#60 Create profile update endpoint (firstname, lastname, birthday,phone#)",2.3833,Andrew,Ma
+12/10/2016,-,Popular Media,"#60 Create profile update endpoint (firstname, lastname, birthday,phone#)",2.2086,Andrew,Ma
+12/12/2016,-,Popular Media,"#60 Create profile update endpoint (firstname, lastname, birthday,phone#)",4.4614,Andrew,Ma
+12/05/2016,-,Popular Media,#61 Create get profile endpoint,3.6186,Andrew,Ma
+12/06/2016,-,Popular Media,#61 Create get profile endpoint,4.2061,Andrew,Ma
+12/09/2016,-,Popular Media,#61 Create get profile endpoint,0.3333,Philip,Ross
+12/09/2016,-,Popular Media,#61 Create get profile endpoint,1.5000,Andrew,Ma
+12/13/2016,-,Popular Media,[Research] Paperclip Gem,0.5058,Philip,Ross
+11/01/2016,-,Popular Media,#66 Create Front-end Alerts from Backend,4.0000,Philip,Ross
+11/10/2016,-,Popular Media,#66 Create Front-end Alerts from Backend,7.2000,Philip,Ross
+12/05/2016,-,Popular Media,#66 Create Front-end Alerts from Backend,3.1825,Philip,Ross
+12/09/2016,-,Popular Media,#66 Create Front-end Alerts from Backend,3.3336,Philip,Ross
+12/10/2016,-,Popular Media,#66 Create Front-end Alerts from Backend,0.3333,Jeremy,Wright
+12/11/2016,-,Popular Media,#66 Create Front-end Alerts from Backend,1.5167,Philip,Ross
+10/17/2016,-,Popular Media,#67 Create Factories for seeding,4.3375,Philip,Ross
+10/23/2016,-,Popular Media,#67 Create Factories for seeding,1.9667,Philip,Ross
+10/25/2016,-,Popular Media,#67 Create Factories for seeding,3.6000,Philip,Ross
+10/24/2016,-,Popular Media,#67 Create Factories for seeding,1.0000,Philip,Ross
+10/20/2016,-,Popular Media,#68 Make our Rails models have associations,4.0425,Philip,Ross
+10/21/2016,-,Popular Media,#68 Make our Rails models have associations,2.0000,Philip,Ross
+10/24/2016,-,Popular Media,#69 Add  i18n string localization and formatting to Ember,6.4331,Andrew,Ma
+11/04/2016,-,Popular Media,#70 Move client-facing strings to i18n file,0.0167,Luke,Miller
+12/06/2016,-,Popular Media,#73 Create media thumbnail component,1.5000,Jeremy,Wright
+12/13/2016,-,Popular Media,#74 Implement Paperclip Gem into mediaObject model,1.0167,Philip,Ross
+12/15/2016,-,Popular Media,#74 Implement Paperclip Gem into mediaObject model,0.2867,Philip,Ross
+12/16/2016,-,Popular Media,#74 Implement Paperclip Gem into mediaObject model,0.8886,Philip,Ross
+10/27/2016,-,Popular Media,#76 Send POST request to Rails on attempted login,0.7156,Andrew,Ma
+11/01/2016,-,Popular Media,#76 Send POST request to Rails on attempted login,0.4567,Andrew,Ma
+11/01/2016,-,Popular Media,#76 Fix jobs to use keyword arguments and actually work,1.9875,Philip,Ross
+11/07/2016,-,Popular Media,#49 BUGFIX add encryption to login and register calls,1.0000,Andrew,Ma
+11/26/2016,-,Popular Media,#49 BUGFIX add encryption to login and register calls,4.0000,Andrew,Ma
+12/06/2016,-,Popular Media,#49 BUGFIX add encryption to login and register calls,0.7631,Andrew,Ma
+01/08/2017,-,Popular Media,#79 Create password update/reset endpoint,2.0225,Andrew,Ma
+01/09/2017,-,Popular Media,#79 Create password update/reset endpoint,0.6144,Andrew,Ma
+12/15/2016,-,Popular Media,#80 Create media page with image filling columns,1.5000,Jeremy,Wright
+12/16/2016,-,Popular Media,#80 Create media page with image filling columns,2.5000,Jeremy,Wright
+12/16/2016,-,Popular Media,#80 Create media page with image filling columns,1.1000,Philip,Ross
+01/08/2017,-,Popular Media,#80 Create media page with image filling columns,0.6447,Jeremy,Wright
+01/08/2017,-,Popular Media,#80 Create media page with image filling columns,0.6333,Philip,Ross
+12/16/2016,-,Popular Media,#81 Create endpoint to enqueue a list of images for tagging by Google Vision,0.0167,Philip,Ross
+12/18/2016,-,Popular Media,#81 Create endpoint to enqueue a list of images for tagging by Google Vision,0.9597,Andrew,Ma
+12/19/2016,-,Popular Media,#81 Create endpoint to enqueue a list of images for tagging by Google Vision,1.8406,Philip,Ross
+12/14/2016,-,Popular Media,#82 Create script for tagging a image lists using Google Vision,1.8178,Andrew,Ma
+12/15/2016,-,Popular Media,#82 Create script for tagging a image lists using Google Vision,1.4767,Andrew,Ma
+12/15/2016,-,Popular Media,#82 Create script for tagging a image lists using Google Vision,1.1167,Philip,Ross
+12/16/2016,-,Popular Media,#82 Create script for tagging a image lists using Google Vision,2.2703,Andrew,Ma
+12/19/2016,-,Popular Media,#82 Create script for tagging a image lists using Google Vision,0.8953,Philip,Ross
+12/19/2016,-,Popular Media,#82 Create script for tagging a image lists using Google Vision,0.8500,Andrew,Ma
+01/05/2017,-,Popular Media,#84 Associate web sockets with profiles,4.7003,Philip,Ross
+01/09/2017,-,Popular Media,#84 Associate web sockets with profiles,2.7514,Philip,Ross
+01/09/2017,-,Popular Media,[Spike] Improve mutation testing,1.0000,Philip,Ross
+09/08/2016,-,Popular Media,#1 Create Rails Project,1.0000,Andrew,Ma
+09/08/2016,-,Popular Media,#2 Health Check Endpoint,99.1667,Andrew,Ma
+09/08/2016,-,Popular Media,#4 Write Rails Documentation,0.0833,Andrew,Ma
+09/09/2016,-,Popular Media,#4 Write Rails Documentation,1.0000,Philip,Ross
+09/08/2016,-,Popular Media,#4 Write Rails Documentation,0.5000,Philip,Ross
+09/09/2016,-,Popular Media,#8 Convert tests to specs,0.1661,Philip,Ross
+09/09/2016,-,Popular Media,#9 Add Ruby version to Gemfile,0.5067,Philip,Ross
+09/09/2016,-,Popular Media,#10 Make dev process documentation,0.5397,Philip,Ross
+09/12/2016,-,Popular Media,#14 Create proc file for production,0.2386,Andrew,Ma
+09/11/2016,-,Popular Media,#13 Update Ember Repo Documenation,0.0789,Luke,Miller
+09/12/2016,-,Popular Media,#17 Fix Gemfile for Windows,58.7469,Andrew,Ma
+10/04/2016,-,Popular Media,#11 Zeplin Invites,0.0167,Jack,Hall
