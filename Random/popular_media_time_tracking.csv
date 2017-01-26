@@ -3,18 +3,20 @@ Date,Client,Project,Notes,Hours,First name,Last name
 09/20/2016,-,Popular Media,#20  Create front end receiver for background job worker,3.7833,Philip,Ross
 09/26/2016,-,Popular Media,#20  Create front end receiver for background job worker,8.0614,Philip,Ross
 09/26/2016,-,Popular Media,#36 Mock up signup page,1.4944,Jeremy,Wright
-01/04/2017,-,Popular Media,#72 Add Akkurat font styling to Ember,0.5000,Luke,Miller
-01/10/2017,-,Popular Media,#72 Add Akkurat font styling to Ember,0.0167,Luke,Miller
 11/11/2016,-,Popular Media,#77 use ember exam for tests,1.0000,Philip,Ross
-12/10/2016,-,Popular Media,#83 Integrate Google Vision tagging script with Rails backend and background worker,0.5000,Jeremy,Wright
-01/10/2017,-,Popular Media,#83 Integrate Google Vision tagging script with Rails backend and background worker,0.5036,Philip,Ross
+01/17/2017,-,Popular Media,#85 Move action cable connection to after login,0.7931,Luke,Miller
+01/24/2017,-,Popular Media,#85 Move action cable connection to after login,1.7550,Luke,Miller
+01/24/2017,-,Popular Media,#85 Move action cable connection to after login,0.2500,Philip,Ross
+01/22/2017,-,Popular Media,#92 Create media upload on front-end,1.0700,Andrew,Ma
+01/23/2017,-,Popular Media,#92 Create media upload on front-end,3.2497,Philip,Ross
+01/23/2017,-,Popular Media,#92 Create media upload on front-end,6.0167,Andrew,Ma
+01/24/2017,-,Popular Media,#92 Create media upload on front-end,2.3125,Andrew,Ma
+01/24/2017,-,Popular Media,#92 Create media upload on front-end,1.3333,Philip,Ross
 09/14/2016,-,Popular Media,#17 Fix Gemfile,0.0489,Philip,Ross
 10/03/2016,-,Popular Media,#47 Install bcrypt and encrypt password on submit for registration and login,2.2083,Jeremy,Wright
-12/19/2016,-,Popular Media,#75 Route to dashboard page on successful login or register,1.5500,Luke,Miller
-01/10/2017,-,Popular Media,#75 Route to dashboard page on successful login or register,2.0067,Luke,Miller
-01/10/2017,-,Popular Media,#75 Route to dashboard page on successful login or register,0.2361,Philip,Ross
-01/11/2017,-,Popular Media,#75 Route to dashboard page on successful login or register,2.8678,Philip,Ross
-01/12/2017,-,Popular Media,#75 Route to dashboard page on successful login or register,0.3333,Philip,Ross
+01/18/2017,-,Popular Media,#86 Pull media from server to client on browse page,2.9511,Jeremy,Wright
+01/20/2017,-,Popular Media,#86 Pull media from server to client on browse page,2.0167,Jeremy,Wright
+01/22/2017,-,Popular Media,#86 Pull media from server to client on browse page,2.7500,Jeremy,Wright
 09/19/2016,-,Popular Media,#16 Research testing frameworks for Ember,2.8664,Andrew,Ma
 09/20/2016,-,Popular Media,#16 Research testing frameworks for Ember,0.9025,Andrew,Ma
 09/15/2016,-,Popular Media,#21 Create backend framework for background worker job,2.4558,Philip,Ross
@@ -32,14 +34,14 @@ Date,Client,Project,Notes,Hours,First name,Last name
 09/30/2016,-,Popular Media,#30 Setup Mutation testing for rails,3.7336,Philip,Ross
 09/30/2016,-,Popular Media,#34 Create routes for all pages,0.1031,Andrew,Ma
 09/28/2016,-,Popular Media,#35 Create static navigational bar for all pages,5.1153,Andrew,Ma
-10/09/2016,-,Popular Media,#44 Create rails model objects,27.8036,Andrew,Ma
+10/09/2016,-,Popular Media,#44 Create rails model objects,1.8000,Andrew,Ma
 09/30/2016,-,Popular Media,#45 Create registration and login endpoints,0.5039,Andrew,Ma
 09/23/2016,-,Popular Media,#49 Add Git Hook to prevent pushing to master,0.5167,Philip,Ross
 09/25/2016,-,Popular Media,#49 Add Git Hook to prevent pushing to master,0.0167,Philip,Ross
 10/08/2016,-,Popular Media,#48 Registration endpoint call to Popular Pays API,4.5686,Andrew,Ma
 10/09/2016,-,Popular Media,#48 Registration endpoint call to Popular Pays API,2.4639,Andrew,Ma
 10/10/2016,-,Popular Media,#48 Registration endpoint call to Popular Pays API,3.6319,Andrew,Ma
-10/11/2016,-,Popular Media,#48 Registration endpoint call to Popular Pays API,9.4469,Andrew,Ma
+10/11/2016,-,Popular Media,#48 Registration endpoint call to Popular Pays API,5.4333,Andrew,Ma
 10/10/2016,-,Popular Media,#49 Login endpoint call to Popular Pays API,1.1936,Andrew,Ma
 10/10/2016,-,Popular Media,#50 Find guide to handle git merge conflicts and rebasing and link to guide,0.1572,Philip,Ross
 10/17/2016,-,Popular Media,#53 Create image model object on Rails,1.8747,Philip,Ross
@@ -73,10 +75,18 @@ Date,Client,Project,Notes,Hours,First name,Last name
 10/21/2016,-,Popular Media,#68 Make our Rails models have associations,2.0000,Philip,Ross
 10/24/2016,-,Popular Media,#69 Add  i18n string localization and formatting to Ember,6.4331,Andrew,Ma
 11/04/2016,-,Popular Media,#70 Move client-facing strings to i18n file,0.0167,Luke,Miller
+01/04/2017,-,Popular Media,#72 Add Akkurat font styling to Ember,0.5000,Luke,Miller
+01/10/2017,-,Popular Media,#72 Add Akkurat font styling to Ember,0.0167,Luke,Miller
+01/16/2017,-,Popular Media,#72 Add Akkurat font styling to Ember,1.5314,Luke,Miller
 12/06/2016,-,Popular Media,#73 Create media thumbnail component,1.5000,Jeremy,Wright
 12/13/2016,-,Popular Media,#74 Implement Paperclip Gem into mediaObject model,1.0167,Philip,Ross
 12/15/2016,-,Popular Media,#74 Implement Paperclip Gem into mediaObject model,0.2867,Philip,Ross
 12/16/2016,-,Popular Media,#74 Implement Paperclip Gem into mediaObject model,0.8886,Philip,Ross
+12/19/2016,-,Popular Media,#75 Route to dashboard page on successful login or register,1.5500,Luke,Miller
+01/10/2017,-,Popular Media,#75 Route to dashboard page on successful login or register,2.0067,Luke,Miller
+01/10/2017,-,Popular Media,#75 Route to dashboard page on successful login or register,0.2361,Philip,Ross
+01/11/2017,-,Popular Media,#75 Route to dashboard page on successful login or register,2.8678,Philip,Ross
+01/12/2017,-,Popular Media,#75 Route to dashboard page on successful login or register,0.3333,Philip,Ross
 10/27/2016,-,Popular Media,#76 Send POST request to Rails on attempted login,0.7156,Andrew,Ma
 11/01/2016,-,Popular Media,#76 Send POST request to Rails on attempted login,0.4567,Andrew,Ma
 11/01/2016,-,Popular Media,#76 Fix jobs to use keyword arguments and actually work,1.9875,Philip,Ross
@@ -99,11 +109,25 @@ Date,Client,Project,Notes,Hours,First name,Last name
 12/16/2016,-,Popular Media,#82 Create script for tagging a image lists using Google Vision,2.2703,Andrew,Ma
 12/19/2016,-,Popular Media,#82 Create script for tagging a image lists using Google Vision,0.8953,Philip,Ross
 12/19/2016,-,Popular Media,#82 Create script for tagging a image lists using Google Vision,0.8500,Andrew,Ma
+12/10/2016,-,Popular Media,#83 Integrate Google Vision tagging script with Rails backend and background worker,0.5000,Jeremy,Wright
+01/10/2017,-,Popular Media,#83 Integrate Google Vision tagging script with Rails backend and background worker,0.5036,Philip,Ross
+01/12/2017,-,Popular Media,#83 Integrate Google Vision tagging script with Rails backend and background worker,2.8617,Philip,Ross
+01/16/2017,-,Popular Media,#83 Integrate Google Vision tagging script with Rails backend and background worker,2.2419,Philip,Ross
+01/17/2017,-,Popular Media,#83 Integrate Google Vision tagging script with Rails backend and background worker,4.9956,Philip,Ross
+01/20/2017,-,Popular Media,#83 Integrate Google Vision tagging script with Rails backend and background worker,0.1928,Philip,Ross
 01/05/2017,-,Popular Media,#84 Associate web sockets with profiles,4.7003,Philip,Ross
 01/09/2017,-,Popular Media,#84 Associate web sockets with profiles,2.7514,Philip,Ross
 01/09/2017,-,Popular Media,[Spike] Improve mutation testing,1.0000,Philip,Ross
+01/12/2017,-,Popular Media,#88 Upload media endpoint created,2.4072,Andrew,Ma
+01/13/2017,-,Popular Media,#88 Upload media endpoint created,1.4575,Andrew,Ma
+01/15/2017,-,Popular Media,#88 Upload media endpoint created,3.2519,Andrew,Ma
+01/16/2017,-,Popular Media,#88 Upload media endpoint created,2.0136,Philip,Ross
+01/16/2017,-,Popular Media,#88 Upload media endpoint created,4.6881,Andrew,Ma
+01/17/2017,-,Popular Media,#88 Upload media endpoint created,1.0600,Philip,Ross
+01/17/2017,-,Popular Media,#88 Upload media endpoint created,0.1061,Andrew,Ma
+01/12/2017,-,Popular Media,#93 Create default upload account on profile creation,0.6681,Andrew,Ma
 09/08/2016,-,Popular Media,#1 Create Rails Project,1.0000,Andrew,Ma
-09/08/2016,-,Popular Media,#2 Health Check Endpoint,99.1667,Andrew,Ma
+09/08/2016,-,Popular Media,#2 Health Check Endpoint,1.4667,Andrew,Ma
 09/08/2016,-,Popular Media,#4 Write Rails Documentation,0.0833,Andrew,Ma
 09/09/2016,-,Popular Media,#4 Write Rails Documentation,1.0000,Philip,Ross
 09/08/2016,-,Popular Media,#4 Write Rails Documentation,0.5000,Philip,Ross
@@ -112,5 +136,5 @@ Date,Client,Project,Notes,Hours,First name,Last name
 09/09/2016,-,Popular Media,#10 Make dev process documentation,0.5397,Philip,Ross
 09/12/2016,-,Popular Media,#14 Create proc file for production,0.2386,Andrew,Ma
 09/11/2016,-,Popular Media,#13 Update Ember Repo Documenation,0.0789,Luke,Miller
-09/12/2016,-,Popular Media,#17 Fix Gemfile for Windows,58.7469,Andrew,Ma
+09/12/2016,-,Popular Media,#17 Fix Gemfile for Windows,1.5000,Andrew,Ma
 10/04/2016,-,Popular Media,#11 Zeplin Invites,0.0167,Jack,Hall
