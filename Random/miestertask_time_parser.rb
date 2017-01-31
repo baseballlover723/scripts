@@ -21,9 +21,9 @@ def parse(csv_path, start_date, end_date)
   end_date = end_date ? Date.parse(end_date) : Date.today
   has_christmas = start_date < CHRISTMAS && CHRISTMAS < end_date
 
-  first_tuesday = start_date
-  until first_tuesday.tuesday?
-    first_tuesday = first_tuesday.prev_day
+  first_sprint_start = start_date
+  until first_sprint_start.wednesday?
+    first_sprint_start = first_sprint_start.prev_day
   end
   weeks = Hash.new { |h, k| h[k] = Hash.new(0) }
   logged_time = Hash.new(0)
@@ -41,7 +41,7 @@ def parse(csv_path, start_date, end_date)
     person = row[5]
 
     logged_time[person] += hours
-    sprint_num = ((date - first_tuesday) / 7).to_i
+    sprint_num = ((date - first_sprint_start) / 7).to_i
     puts sprint_num
     weeks[sprint_num][person] += hours
 
@@ -52,7 +52,7 @@ def parse(csv_path, start_date, end_date)
   puts "time logged from #{start_date} to #{end_date} in hours"
   puts logged_time
   weeks.keys.sort.each do |sprint_num|
-    sprint_start = first_tuesday
+    sprint_start = first_sprint_start
     (sprint_num*7).times { sprint_start = sprint_start.next_day }
     sprint_end = sprint_start
     7.times { sprint_end = sprint_end.next_day }
@@ -71,7 +71,7 @@ def parse(csv_path, start_date, end_date)
     wb.add_worksheet(name: 'time logged') do |ws|
       ws.add_row ['Time Logged in Hours Per Sprint', 'Andrew Ma', 'Luke Miller', 'Philip Ross', 'Jeremy Wright', 'Average'], style: title
       weeks.keys.sort.each do |sprint_num|
-        sprint_start = first_tuesday
+        sprint_start = first_sprint_start
         (sprint_num*7).times { sprint_start = sprint_start.next_day }
         sprint_end = sprint_start
         7.times { sprint_end = sprint_end.next_day }
