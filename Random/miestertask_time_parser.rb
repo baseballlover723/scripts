@@ -15,6 +15,8 @@ require 'axlsx'
 
 DATE_FORMAT = '%m/%d'
 CHRISTMAS = Date.new(2016, 12, 25)
+BREAK_START = Date.new(2017, 4, 8)
+BREAK_END = Date.new(2017, 4, 16)
 
 def parse(csv_path, start_date, end_date)
   start_date = start_date ? Date.parse(start_date) : Date.today.prev_year
@@ -42,6 +44,7 @@ def parse(csv_path, start_date, end_date)
 
     logged_time[person] += hours
     sprint_num = ((date - first_sprint_start) / 7).to_i
+    sprint_num = 4.5 if BREAK_START < date && date < BREAK_END
     puts sprint_num
     weeks[sprint_num][person] += hours
 
@@ -53,10 +56,10 @@ def parse(csv_path, start_date, end_date)
   puts logged_time
   weeks.keys.sort.each do |sprint_num|
     sprint_start = first_sprint_start
-    (sprint_num*7).times { sprint_start = sprint_start.next_day }
-    sprint_end = sprint_start
-    7.times { sprint_end = sprint_end.next_day }
-    puts "sprint #{sprint_num - starting_sprint_num - (has_christmas && CHRISTMAS < sprint_end ? 2 : 0)} (#{sprint_start.strftime(DATE_FORMAT)} - #{sprint_end.strftime(DATE_FORMAT)}): #{weeks[sprint_num]}"
+    sprint_num == 4.5 ? (sprint_start = BREAK_START) : (sprint_num*7).times { sprint_start = sprint_start.next_day }
+    sprint_end = sprint_num == 4.5 ? BREAK_END : sprint_start
+    7.times { sprint_end = sprint_end.next_day } unless sprint_num == 4.5
+    puts "sprint #{sprint_num - starting_sprint_num - (BREAK_END < sprint_end ? 1 : 0)} (#{sprint_start.strftime(DATE_FORMAT)} - #{sprint_end.strftime(DATE_FORMAT)}): #{weeks[sprint_num]}"
   end
   puts weeks
 
@@ -72,15 +75,16 @@ def parse(csv_path, start_date, end_date)
       ws.add_row ['Time Logged in Hours Per Sprint', 'Andrew Ma', 'Luke Miller', 'Philip Ross', 'Jeremy Wright', 'Average'], style: title
       weeks.keys.sort.each do |sprint_num|
         sprint_start = first_sprint_start
-        (sprint_num*7).times { sprint_start = sprint_start.next_day }
-        sprint_end = sprint_start
-        7.times { sprint_end = sprint_end.next_day }
+        sprint_num == 4.5 ? (sprint_start = BREAK_START) : (sprint_num*7).times { sprint_start = sprint_start.next_day }
+        sprint_end = sprint_num == 4.5 ? BREAK_END : sprint_start
+        7.times { sprint_end = sprint_end.next_day } unless sprint_num == 4.5
+        sprint_start = sprint_start.next_day while (BREAK_START < sprint_start && sprint_start < BREAK_END)
         andrew = weeks[sprint_num]['Andrew']
         luke = weeks[sprint_num]['Luke']
         philip = weeks[sprint_num]['Philip']
         jeremy = weeks[sprint_num]['Jeremy']
         avg = (andrew + luke + philip + jeremy) / 4
-        ws.add_row ["Sprint #{sprint_num - starting_sprint_num - (has_christmas && CHRISTMAS < sprint_end ? 2 : 0)} (#{sprint_start.strftime(DATE_FORMAT)} - #{sprint_end.strftime(DATE_FORMAT)})", andrew, luke, philip, jeremy, avg]
+        ws.add_row ["Sprint #{sprint_num - starting_sprint_num - (BREAK_END < sprint_end ? 1 : 0)} #{"(Spring Break)" if sprint_num==4.5} (#{sprint_start.strftime(DATE_FORMAT)} - #{sprint_end.strftime(DATE_FORMAT)})", andrew, luke, philip, jeremy, avg]
       end
 
       ws.add_row
@@ -103,7 +107,7 @@ end
 if __FILE__== $0
   unless ARGV[0]
     ARGV[0] = 'popular_media_time_tracking.csv'
-    ARGV[1] = '2016-11-28'
+    ARGV[1] = '2017-03-06'
   end
   parse(ARGV[0], ARGV[1], ARGV[2])
 end
