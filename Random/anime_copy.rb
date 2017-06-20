@@ -7,10 +7,10 @@ require 'active_support/number_helper'
 ActiveSupport::Deprecation.silenced = true
 
 CURSOR = TTY::Cursor
-DEFRAG_COMMAND = '"C:\Program Files (x86)\Auslogics\Disk Defrag\cdefrag" -o D:'
+DEFRAG_COMMAND = '"C:\Program Files (x86)\Auslogics\Disk Defrag\cdefrag" -o F:'
 PATH = '\anime'
-DEST = 'D:' + PATH
-SRC = 'F:' + PATH
+DEST = 'F:' + PATH
+SRC = 'D:' + PATH
 OPTS = {encoding: 'UTF-8'}
 
 def size(numb)
@@ -37,14 +37,18 @@ def main
   shows = Dir.entries SRC, OPTS
 
   count = 0
+  @start_time = Time.now
+  @start_dest_size = directory_size DEST, false
+  @total_src_size = directory_size SRC, false
+
   shows.each do |show|
     next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini'
-    next if show == 'Attack On Titan' || show == 'Boku no Hero Academia' || show == 'DanMachi' || show == 'Saekano; How to Raise a Boring Girlfriend' || show.include?('(In Progress)')
+    # next if show == 'Attack On Titan' || show == 'Boku no Hero Academia' || show == 'DanMachi' || show == 'Saekano; How to Raise a Boring Girlfriend' || show.include?('(In Progress)')
     # count += 1 and next if count < 4
     next if already_copied show
     copy_show show
     count += 1
-    # break if count > 0
+    # break if count > 5
   end
 end
 
@@ -62,7 +66,7 @@ def print_progress(show)
   max = directory_size "#{SRC}/#{show}"
   Thread.new do
     while true
-      sleep 0.1
+      sleep 0.2
       # dest = Filesystem.stat("#{DEST}/#{show}")
       # current = dest.blocks * dest.block_size
       current = directory_size "#{DEST}/#{show}"
@@ -94,9 +98,22 @@ def optimize(show)
   # STDOUT.flush
   # print "\033[6A"
   # STDOUT.flush
-  puts "finish optimizing #{show.cyan} at #{time}"
+  eta, size_left = calc_eta
+  puts "finish optimizing #{show.cyan} at #{time}. ETA: #{eta} size left: #{size_left}"
 end
 
+def calc_eta
+  dest_size = directory_size DEST, false
+  size_done = dest_size - @start_dest_size
+  size_left = @total_src_size - dest_size
+
+  duration = (Time.now - @start_time).to_f
+  speed = size_done / duration
+  time_left = size_left / speed
+  eta = Time.now + time_left
+  # puts "size_done #{size_done}, duration: #{duration}, size_left: #{size_left}, speed: #{speed}, time_left #{time_left}, eta: #{eta.strftime("%l:%M:%S %P")}"
+  return eta.strftime("%l:%M:%S %P").green, size(size_left).cyan
+end
 
 # puts directory_size "#{DEST}\\ERASED"
 main
