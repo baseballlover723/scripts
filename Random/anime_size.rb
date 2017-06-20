@@ -69,5 +69,11 @@ def calculate_size(show)
 end
 
 main
+RESULTS.sort_by(&:name)
+File.open('./anime.txt', 'w') do |file|
+  RESULTS.each do |anime|
+    file.puts(anime.name)
+  end
+end
 RESULTS.sort_by!(&:bytes).reverse!
 puts RESULTS
