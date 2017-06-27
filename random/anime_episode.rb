@@ -1,4 +1,4 @@
-PATH = 'D:\anime'
+PATH = '/mnt/d/anime'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 require 'set'
