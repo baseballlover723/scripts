@@ -38,3 +38,4 @@ build/
 /bin/
 
 .project
+/anime/.env
