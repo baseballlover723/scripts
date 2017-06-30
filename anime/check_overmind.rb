@@ -15,6 +15,23 @@ REMOTE_PATH = '../../raided/anime'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 
+class String
+  def local_color
+    replace self.light_green
+  end
+
+  def remote_color
+    replace self.light_red
+  end
+
+  def external_color
+    replace self.light_magenta
+  end
+
+  def uncolor
+    replace self.uncolorize
+  end
+end
 
 class Anime
   attr_accessor :name, :seasons
@@ -61,7 +78,29 @@ class Episode
   end
 
   def to_s
-    "#{@name.split('.')[0]}: #{h_size(@local_size).green} (#{h_size(@remote_size).red}) [#{h_size(@external_size).cyan}]"
+    local_size = h_size(@local_size)
+    remote_size = h_size(@remote_size)
+    external_size = h_size(@external_size)
+    local_size.local_color unless @local_size == @remote_size || @local_size == @external_size
+    remote_size.remote_color unless @remote_size == @local_size || @remote_size == @external_size
+    external_size.external_color unless @external_size == @local_size || @external_size == @remote_size
+    if @remote_size == 0 && @external_size == 0
+      local_size.uncolor
+      remote_size.remote_color
+      external_size.external_color
+    end
+    if @local_size == 0 && @external_size == 0
+      local_size.local_color
+      remote_size.uncolor
+      external_size.external_color
+    end
+    if @local_size == 0 && @remote_size == 0
+      local_size.local_color
+      remote_size.remote_color
+      external_size = external_size.uncolorize
+    end
+    # TODO use file basename or something to remvove extension
+    "#{@name.split('.')[0].cyan}: #{local_size} (#{remote_size}) [#{external_size}]"
   end
 end
 
@@ -157,9 +196,12 @@ def print_results
   $VERBOSE = nil
   cols = `tput cols`.to_i
   $VERBOSE = original_verbosity
-  print "local size".green
-  print " | "
-  print "remote size\n".red
+  print "local size".local_color
+  print " ("
+  print "remote size".remote_color
+  print ") ["
+  print "external size".external_color
+  print "]\n"
 
   shows = RESULTS.values.sort_by(&:name)
   shows.each do |show|
@@ -170,11 +212,12 @@ def print_results
       str = ''
       episodes = season.episodes.values.sort_by { |e| e.name.to_f == 0 ? 9999 : e.name.to_f }
       episodes.each do |episode|
-        if (str + "#{episode}, ").uncolorize.length + indent_size < cols
-          str += "#{episode}, "
+        episode_str = episode.to_s
+        if (str + "#{episode_str}, ").uncolorize.length + indent_size < cols
+          str += "#{episode_str}, "
         else
           puts str.indent indent_size
-          str = "#{episode}, "
+          str = "#{episode_str}, "
         end
       end
       puts str.indent indent_size
