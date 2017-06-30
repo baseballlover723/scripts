@@ -10,6 +10,7 @@ end
 
 REMOTE = !ARGV.empty?
 LOCAL_PATH = '/mnt/d/anime'
+EXTERNAL_PATH = '/mnt/f/anime'
 REMOTE_PATH = '../../raided/anime'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
@@ -44,13 +45,14 @@ class Season
 end
 
 class Episode
-  attr_accessor :season, :name, :local_size, :remote_size
+  attr_accessor :season, :name, :local_size, :remote_size, :external_size
 
-  def initialize(season, name, local_size = 0, remote_size = 0)
+  def initialize(season, name)
     @season = season
     @name = name
-    @local_size = local_size
-    @remote_size = remote_size
+    @local_size = 0
+    @remote_size = 0
+    @external_size = 0
     season.add_episode self
   end
 
@@ -59,7 +61,7 @@ class Episode
   end
 
   def to_s
-    "#{@name.split('.')[0].cyan}: #{h_size(@local_size).green} (#{h_size(@remote_size).red})"
+    "#{@name.split('.')[0]}: #{h_size(@local_size).green} (#{h_size(@remote_size).red}) [#{h_size(@external_size).cyan}]"
   end
 end
 
@@ -74,33 +76,35 @@ def main
     ssh.exec! "rm remote.rb"
   end
   puts 'running locally'
-  iterate LOCAL_PATH
-  iterate LOCAL_PATH + '/zWatched'
+  iterate LOCAL_PATH, 'local'
+  iterate LOCAL_PATH + '/zWatched', 'local'
+  iterate EXTERNAL_PATH, 'external'
+  iterate EXTERNAL_PATH + '/zWatched', 'external'
 end
 
-def iterate(path)
+def iterate(path, type)
   shows = Dir.entries path, OPTS
   count = 0
   shows.each do |show|
     next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini'
-    analyze_show show, path + '/' + show
+    analyze_show show, path + '/' + show, type
     count += 1
     # break if count > 5
   end
 end
 
-def analyze_show(show, path)
+def analyze_show(show, path, type)
   anime = RESULTS[show] || Anime.new(show)
   RESULTS[anime.name] = anime
   root_season = find_season anime, 'root'
   entries = Dir.entries path, OPTS
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-    analyze_show(entry, path + '/' + entry) or next if entry == 'A Certain Scientific Railgun'
+    analyze_show(entry, path + '/' + entry, type) or next if entry == 'A Certain Scientific Railgun'
     if File.directory?("#{path}/#{entry}")
-      analyze_season find_season(anime, entry), path + '/' + entry
+      analyze_season find_season(anime, entry), path + '/' + entry, type
     else
-      analyze_episode root_season, entry, path + '/' + entry
+      analyze_episode root_season, entry, path + '/' + entry, type
     end
   end
   if root_season.episodes.empty?
@@ -108,25 +112,23 @@ def analyze_show(show, path)
   end
 end
 
-def analyze_season(season, path)
+def analyze_season(season, path, type)
   entries = Dir.entries path, OPTS
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-    analyze_episode season, entry, path + '/' + entry
+    analyze_episode season, entry, path + '/' + entry, type
   end
 end
 
-def analyze_episode(season, episode_name, path)
+def analyze_episode(season, episode_name, path, type)
+  episode_name.chomp!('.filepart')
+  episode_name.chomp!('.crdownload')
   episode = find_episode season, episode_name
-  if REMOTE
-    episode.remote_size = File.size(path)
-  else
-    episode.local_size = File.size(path)
-  end
+  episode.send(type + '_size=', File.size(path))
 end
 
 def remote_main
-  iterate(REMOTE_PATH)
+  iterate(REMOTE_PATH, 'remote')
   puts Marshal::dump(RESULTS)
 end
 
@@ -142,7 +144,7 @@ def trim_results
   RESULTS.each_value do |show|
     show.seasons.each_value do |season|
       season.episodes.each_value do |episode|
-        season.episodes.delete(episode.name) if episode.local_size == episode.remote_size
+        season.episodes.delete(episode.name) if episode.local_size == episode.remote_size && episode.local_size == episode.external_size
       end
       show.seasons.delete(season.name) if season.episodes.size == 0
     end
