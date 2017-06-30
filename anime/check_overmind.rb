@@ -99,8 +99,8 @@ class Episode
       remote_size.remote_color
       external_size = external_size.uncolorize
     end
-    # TODO use file basename or something to remvove extension
-    "#{@name.split('.')[0].cyan}: #{local_size} (#{remote_size}) [#{external_size}]"
+    name = File.basename(@name, '.*').cyan
+    "#{name}: #{local_size} (#{remote_size}) [#{external_size}]"
   end
 end
 
