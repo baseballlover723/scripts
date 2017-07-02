@@ -10,10 +10,11 @@ end
 
 REMOTE = !ARGV.empty?
 LOCAL_PATH = '/mnt/d/anime'
-EXTERNAL_PATH = '/mnt/f/anime'
+EXTERNAL_PATH = '/mnt/g/anime'
 REMOTE_PATH = '../../raided/anime'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
+$local_only = false
 
 class String
   def local_color
@@ -29,7 +30,7 @@ class String
   end
 
   def uncolor
-    replace self.uncolorize
+    replace self.light_black
   end
 end
 
@@ -78,9 +79,9 @@ class Episode
   end
 
   def to_s
-    local_size = h_size(@local_size)
-    remote_size = h_size(@remote_size)
-    external_size = h_size(@external_size)
+    local_size = h_size(@local_size).uncolor
+    remote_size = h_size(@remote_size).uncolor
+    external_size = h_size(@external_size).uncolor
     local_size.local_color unless @local_size == @remote_size || @local_size == @external_size
     remote_size.remote_color unless @remote_size == @local_size || @remote_size == @external_size
     external_size.external_color unless @external_size == @local_size || @external_size == @remote_size
@@ -100,19 +101,28 @@ class Episode
       external_size = external_size.uncolorize
     end
     name = File.basename(@name, '.*').cyan
-    "#{name}: #{local_size} (#{remote_size}) [#{external_size}]"
+    if $local_only
+      "#{name}: #{local_size} [#{external_size}]"
+    else
+      "#{name}: #{local_size} (#{remote_size}) [#{external_size}]"
+    end
   end
 end
 
 def main
-  Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD']) do |ssh|
-    ssh.sftp.connect do |sftp|
-      sftp.upload!(__FILE__, "remote.rb")
+  begin
+    Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1) do |ssh|
+      ssh.sftp.connect do |sftp|
+        sftp.upload!(__FILE__, "remote.rb")
+      end
+      puts 'running on remote'
+      serialized_results = ssh.exec! "source ~/.rvm/scripts/rvm; ruby remote.rb remote"
+      RESULTS.replace Marshal::load(serialized_results)
+      ssh.exec! "rm remote.rb"
     end
-    puts 'running on remote'
-    serialized_results = ssh.exec! "source ~/.rvm/scripts/rvm; ruby remote.rb remote"
-    RESULTS.replace Marshal::load(serialized_results)
-    ssh.exec! "rm remote.rb"
+  rescue Errno::EAGAIN => e
+    puts 'could not connect to overmind'
+    $local_only = true
   end
   puts 'running locally'
   iterate LOCAL_PATH, 'local'
@@ -183,7 +193,11 @@ def trim_results
   RESULTS.each_value do |show|
     show.seasons.each_value do |season|
       season.episodes.each_value do |episode|
-        season.episodes.delete(episode.name) if episode.local_size == episode.remote_size && episode.local_size == episode.external_size
+        if $local_only
+          season.episodes.delete(episode.name) if episode.local_size == episode.external_size
+        else
+          season.episodes.delete(episode.name) if episode.local_size == episode.remote_size && episode.local_size == episode.external_size
+        end
       end
       show.seasons.delete(season.name) if season.episodes.size == 0
     end
@@ -201,7 +215,9 @@ def print_results
   print "remote size".remote_color
   print ") ["
   print "external size".external_color
-  print "]\n"
+  print "] "
+  print "unchanged".uncolor
+  print "\n"
 
   shows = RESULTS.values.sort_by(&:name)
   shows.each do |show|
