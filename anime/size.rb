@@ -3,7 +3,7 @@ require 'colorize'
 require 'active_support'
 require 'active_support/number_helper'
 
-PATH = 'F:\anime'
+PATH = '/mnt/g/anime'
 OPTS = {encoding: 'UTF-8'}
 SHOWS = {}
 RESULTS = []
@@ -48,7 +48,7 @@ def directory_size(path)
   entries = Dir.entries path, OPTS
   entries.each do |f|
     next if f == '.' || f == '..' || f == 'zWatched' || f == 'desktop.ini'
-    f = "#{path}\\#{f}"
+    f = "#{path}/#{f}"
     total_size += File.size(f) if File.file?(f) && File.size?(f)
     total_size += directory_size f if File.directory? f
   end
