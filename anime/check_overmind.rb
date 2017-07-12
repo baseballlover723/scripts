@@ -1,3 +1,10 @@
+REMOTE = !ARGV.empty?
+LOCAL_PATH = '/mnt/d/anime'
+EXTERNAL_PATH = '/mnt/g/anime'
+REMOTE_PATH = '../../raided/anime'
+OPTS = {encoding: 'UTF-8'}
+RESULTS = {}
+
 if ARGV.empty?
   require 'dotenv/load'
   require 'net/ssh'
@@ -6,15 +13,17 @@ if ARGV.empty?
   require 'active_support'
   require 'active_support/number_helper'
   require 'active_support/core_ext/string/indent'
-end
 
-REMOTE = !ARGV.empty?
-LOCAL_PATH = '/mnt/d/anime'
-EXTERNAL_PATH = '/mnt/g/anime'
-REMOTE_PATH = '../../raided/anime'
-OPTS = {encoding: 'UTF-8'}
-RESULTS = {}
-$local_only = false
+  original_verbosity = $VERBOSE
+  $VERBOSE = nil
+  $include_overmind = true
+  $VERBOSE = original_verbosity
+  $include_external = File.directory? EXTERNAL_PATH
+  puts 'skipping overmind' unless $include_overmind
+  puts 'skipping external' unless $include_external
+
+  abort("overmind or an external hard drive need to be connected to work") unless ($include_overmind || $include_external)
+end
 
 class String
   def local_color
@@ -101,10 +110,12 @@ class Episode
       external_size = external_size.uncolorize
     end
     name = File.basename(@name, '.*').cyan
-    if $local_only
-      "#{name}: #{local_size} [#{external_size}]"
-    else
+    if $include_overmind && $include_external
       "#{name}: #{local_size} (#{remote_size}) [#{external_size}]"
+    elsif !$include_overmind && $include_external
+      "#{name}: #{local_size} [#{external_size}]"
+    elsif $include_overmind && !$include_external
+      "#{name}: #{local_size} (#{remote_size})"
     end
   end
 end
@@ -122,13 +133,15 @@ def main
     end
   rescue Errno::EAGAIN => e
     puts 'could not connect to overmind'
-    $local_only = true
+    $include_overmind = false
   end
   puts 'running locally'
   iterate LOCAL_PATH, 'local'
   iterate LOCAL_PATH + '/zWatched', 'local'
-  iterate EXTERNAL_PATH, 'external'
-  iterate EXTERNAL_PATH + '/zWatched', 'external'
+  if $include_external
+    iterate EXTERNAL_PATH, 'external'
+    iterate EXTERNAL_PATH + '/zWatched', 'external'
+  end
 end
 
 def iterate(path, type)
@@ -193,10 +206,12 @@ def trim_results
   RESULTS.each_value do |show|
     show.seasons.each_value do |season|
       season.episodes.each_value do |episode|
-        if $local_only
-          season.episodes.delete(episode.name) if episode.local_size == episode.external_size
-        else
+        if $include_overmind && $include_external
           season.episodes.delete(episode.name) if episode.local_size == episode.remote_size && episode.local_size == episode.external_size
+        elsif !$include_overmind && $include_external
+          season.episodes.delete(episode.name) if episode.local_size == episode.external_size
+        elsif $include_overmind && !$include_external
+          season.episodes.delete(episode.name) if episode.local_size == episode.remote_size
         end
       end
       show.seasons.delete(season.name) if season.episodes.size == 0
@@ -211,12 +226,17 @@ def print_results
   cols = `tput cols`.to_i
   $VERBOSE = original_verbosity
   print "local size".local_color
-  print " ("
-  print "remote size".remote_color
-  print ") ["
-  print "external size".external_color
-  print "] "
-  print "unchanged".uncolor
+  if $include_overmind
+    print " ("
+    print "remote size".remote_color
+    print ")"
+  end
+  if $include_external
+    print " ["
+    print "external size".external_color
+    print "]"
+  end
+  print " unchanged".uncolor
   print "\n"
 
   shows = RESULTS.values.sort_by(&:name)
