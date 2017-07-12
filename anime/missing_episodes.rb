@@ -1,4 +1,4 @@
-PATH = '/mnt/d/anime'
+PATH = '/mnt/g/anime'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 require 'set'
@@ -119,7 +119,7 @@ def print_results
       end
     end
   end
-  puts ''
+  puts RESULTS.empty? ? 'There are no missing episodes' : ''
 end
 
 main
