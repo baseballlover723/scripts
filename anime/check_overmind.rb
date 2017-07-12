@@ -162,7 +162,7 @@ def analyze_show(show, path, type)
   entries = Dir.entries path, OPTS
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-    analyze_show(entry, path + '/' + entry, type) or next if entry == 'A Certain Scientific Railgun'
+    analyze_show(entry, path + '/' + entry, type) or next if nested_show? entry
     if File.directory?("#{path}/#{entry}")
       analyze_season find_season(anime, entry), path + '/' + entry, type
     else
@@ -187,6 +187,11 @@ def analyze_episode(season, episode_name, path, type)
   episode_name.chomp!('.crdownload')
   episode = find_episode season, episode_name
   episode.send(type + '_size=', File.size(path))
+end
+
+def nested_show?(show)
+  nested_shows = ['A Certain Scientific Railgun', 'The Legend of Korra']
+  nested_shows.include? show
 end
 
 def remote_main

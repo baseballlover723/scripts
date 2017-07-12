@@ -2,7 +2,7 @@ require 'mediainfo'
 require 'concurrent'
 require 'json'
 
-PATH = '/mnt/d/anime'
+PATH = '/mnt/g/anime'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 
@@ -115,7 +115,7 @@ def analyze_show(show, path)
   entries = Dir.entries "#{path}/#{anime.name}", OPTS
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-    analyze_show(entry, path + '/' + anime.name) and next if entry == 'A Certain Scientific Railgun'
+    analyze_show(entry, path + '/' + anime.name) and next if nested_show? entry
     if File.directory?("#{path}/#{anime.name}/#{entry}")
         analyze_season Season.new(anime, entry), path
     else
@@ -142,6 +142,11 @@ def analyze_episode(season, episode_name, path)
   path = season.name == 'root' ? "#{path}/#{season.anime.name}/#{episode_name}" : "#{path}/#{season.anime.name}/#{season.name}/#{episode_name}"
   raw_episode = Mediainfo.new path
   episode = Episode.new(season, episode_name, raw_episode.video.height)
+end
+
+def nested_show?(show)
+  nested_shows = ['A Certain Scientific Railgun', 'The Legend of Korra']
+  nested_shows.include? show
 end
 
 start = Time.now
