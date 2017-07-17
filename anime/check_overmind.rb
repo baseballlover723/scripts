@@ -14,34 +14,40 @@ if ARGV.empty?
   require 'active_support/number_helper'
   require 'active_support/core_ext/string/indent'
 
-  original_verbosity = $VERBOSE
-  $VERBOSE = nil
-  $include_overmind = true
-  $VERBOSE = original_verbosity
-  $include_external = File.directory? EXTERNAL_PATH
-  puts 'skipping overmind' unless $include_overmind
-  puts 'skipping external' unless $include_external
+  $included = Set.new
+  # $included << 'local'
+  $included << 'remote'
+  $included << 'external' if File.directory? EXTERNAL_PATH
+  puts 'skipping overmind' unless $included.include? 'remote'
+  puts 'skipping external' unless $included.include? 'external'
 
-  abort("overmind or an external hard drive need to be connected to work") unless ($include_overmind || $include_external)
+  abort("overmind or an external hard drive need to be connected to work") unless ($included.size > 1)
 end
 
 class String
-  def local_color
-    replace self.light_green
-  end
-
-  def remote_color
-    replace self.light_red
-  end
-
-  def external_color
-    replace self.light_magenta
-  end
-
   def uncolor
     replace self.light_black
   end
 end
+
+class LocalString < String
+  def paint
+    replace self.light_green
+  end
+end
+
+class RemoteString < String
+  def paint
+    replace self.light_red
+  end
+end
+
+class ExternalString < String
+  def paint
+    replace self.light_magenta
+  end
+end
+
 
 class Anime
   attr_accessor :name, :seasons
@@ -83,62 +89,67 @@ class Episode
     season.add_episode self
   end
 
+  def human_sizes
+    sizes = {}
+    sizes[:local_size] = LocalString.new(h_size(@local_size)).uncolor if $included.include? 'local'
+    sizes[:remote_size] = RemoteString.new(h_size(@remote_size)).uncolor if $included.include? 'remote'
+    sizes[:external_size] = ExternalString.new(h_size(@external_size)).uncolor if $included.include? 'external'
+    sizes
+  end
+
   def h_size(size)
     ActiveSupport::NumberHelper.number_to_human_size(size, {precision: 5, strip_insignificant_zeros: false})
   end
 
   def to_s
-    local_size = h_size(@local_size).uncolor
-    remote_size = h_size(@remote_size).uncolor
-    external_size = h_size(@external_size).uncolor
-    local_size.local_color unless @local_size == @remote_size || @local_size == @external_size
-    remote_size.remote_color unless @remote_size == @local_size || @remote_size == @external_size
-    external_size.external_color unless @external_size == @local_size || @external_size == @remote_size
-    if @remote_size == 0 && @external_size == 0
-      local_size.uncolor
-      remote_size.remote_color
-      external_size.external_color
+    sizes = human_sizes
+
+    # count number of times size shows up
+    size_count = Hash.new(0)
+    size_count['0 Bytes'.uncolor] = sizes.count * -1 + 1
+    sizes.each do |_size_type, size|
+      size_count[size.dup] += 1
     end
-    if @local_size == 0 && @external_size == 0
-      local_size.local_color
-      remote_size.uncolor
-      external_size.external_color
+
+    # color if not the most common (0 always colored)
+    max_size_count = size_count.values.max
+    sizes.each do |size_type, size|
+      sizes[size_type] = size.paint unless size_count[size] == max_size_count
     end
-    if @local_size == 0 && @remote_size == 0
-      local_size.local_color
-      remote_size.remote_color
-      external_size = external_size.uncolorize
-    end
+
     name = File.basename(@name, '.*').cyan
-    if $include_overmind && $include_external
-      "#{name}: #{local_size} (#{remote_size}) [#{external_size}]"
-    elsif !$include_overmind && $include_external
-      "#{name}: #{local_size} [#{external_size}]"
-    elsif $include_overmind && !$include_external
-      "#{name}: #{local_size} (#{remote_size})"
-    end
+    str = "#{name}:"
+    str << " #{sizes[:local_size]}" if sizes.has_key? :local_size
+    str << " (#{sizes[:remote_size]})" if sizes.has_key? :remote_size
+    str << " [#{sizes[:external_size]}]" if sizes.has_key? :external_size
+    str
   end
 end
 
 def main
-  begin
-    Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1) do |ssh|
-      ssh.sftp.connect do |sftp|
-        sftp.upload!(__FILE__, "remote.rb")
+  if $included.include? 'remote'
+    begin
+      Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1) do |ssh|
+        ssh.sftp.connect do |sftp|
+          sftp.upload!(__FILE__, "remote.rb")
+        end
+        puts 'running on remote'
+        serialized_results = ssh.exec! "source ~/.rvm/scripts/rvm; ruby remote.rb remote"
+        RESULTS.replace Marshal::load(serialized_results)
+        ssh.exec! "rm remote.rb"
       end
-      puts 'running on remote'
-      serialized_results = ssh.exec! "source ~/.rvm/scripts/rvm; ruby remote.rb remote"
-      RESULTS.replace Marshal::load(serialized_results)
-      ssh.exec! "rm remote.rb"
+    rescue Errno::EAGAIN => e
+      puts 'could not connect to overmind'
+      $included.delete('remote')
     end
-  rescue Errno::EAGAIN => e
-    puts 'could not connect to overmind'
-    $include_overmind = false
   end
-  puts 'running locally'
-  iterate LOCAL_PATH, 'local'
-  iterate LOCAL_PATH + '/zWatched', 'local'
-  if $include_external
+  if $included.include? 'local'
+    puts 'running locally'
+    iterate LOCAL_PATH, 'local'
+    iterate LOCAL_PATH + '/zWatched', 'local'
+  end
+  if $included.include? 'external'
+    puts 'running on external'
     iterate EXTERNAL_PATH, 'external'
     iterate EXTERNAL_PATH + '/zWatched', 'external'
   end
@@ -162,7 +173,7 @@ def analyze_show(show, path, type)
   entries = Dir.entries path, OPTS
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-    analyze_show(entry, path + '/' + entry, type) or next if nested_show? entry
+    analyze_show(entry, path + '/' + entry, type) and next if nested_show? entry
     if File.directory?("#{path}/#{entry}")
       analyze_season find_season(anime, entry), path + '/' + entry, type
     else
@@ -211,15 +222,15 @@ def trim_results
   RESULTS.each_value do |show|
     show.seasons.each_value do |season|
       season.episodes.each_value do |episode|
-        if $include_overmind && $include_external
-          season.episodes.delete(episode.name) if episode.local_size == episode.remote_size && episode.local_size == episode.external_size
-        elsif !$include_overmind && $include_external
-          season.episodes.delete(episode.name) if episode.local_size == episode.external_size
-        elsif $include_overmind && !$include_external
-          season.episodes.delete(episode.name) if episode.local_size == episode.remote_size
+        sizes = Set.new
+        $included.each do |type|
+          sizes << episode.send("#{type}_size")
         end
+        season.episodes.delete(episode.name) if sizes.size == 1
+
       end
       show.seasons.delete(season.name) if season.episodes.size == 0
+      # show.seasons.delete(season.name) if season.episodes.size > 10 # TODO delete
     end
     RESULTS.delete(show.name) if show.seasons.size == 0
   end
@@ -230,15 +241,15 @@ def print_results
   $VERBOSE = nil
   cols = `tput cols`.to_i
   $VERBOSE = original_verbosity
-  print "local size".local_color
-  if $include_overmind
+  print LocalString.new("local size").paint if $included.include? 'local'
+  if $included.include? 'remote'
     print " ("
-    print "remote size".remote_color
+    print RemoteString.new("remote size").paint
     print ")"
   end
-  if $include_external
+  if $included.include? 'external'
     print " ["
-    print "external size".external_color
+    print ExternalString.new("external size").paint
     print "]"
   end
   print " unchanged".uncolor
