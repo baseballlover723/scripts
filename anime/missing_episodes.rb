@@ -1,4 +1,4 @@
-PATH = '/mnt/g/anime'
+PATH = '/mnt/d/anime'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 require 'set'
@@ -93,6 +93,7 @@ def analyze_season(season)
 end
 
 def analyze_episode(season, episode_name)
+  return if episode_name.end_with? 'download'
   season.add_episode(episode_name.to_f) if episode_name.to_f != 0 || episode_name.start_with?('0')
   if episode_name.include? '&'
     season.add_episode(episode_name.split('&')[1].to_f)
