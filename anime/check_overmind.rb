@@ -15,7 +15,7 @@ if ARGV.empty?
   require 'active_support/core_ext/string/indent'
 
   $included = Set.new
-  # $included << 'local'
+  $included << 'local'
   $included << 'remote'
   $included << 'external' if File.directory? EXTERNAL_PATH
   puts 'skipping overmind' unless $included.include? 'remote'
@@ -89,6 +89,22 @@ class Episode
     season.add_episode self
   end
 
+  def biggest_size_names
+    biggest_instance_vars = []
+    biggest_value = 0
+    instance_variables.each do |instance_var|
+      next unless instance_var.to_s.end_with?('size')
+      value = instance_variable_get instance_var
+      if value > biggest_value
+        biggest_value = value
+        biggest_instance_vars = [instance_var]
+      elsif value == biggest_value
+        biggest_instance_vars << instance_var
+      end
+    end
+    biggest_instance_vars
+  end
+
   def human_sizes
     sizes = {}
     sizes[:local_size] = LocalString.new(h_size(@local_size)).uncolor if $included.include? 'local'
@@ -106,7 +122,14 @@ class Episode
 
     # count number of times size shows up
     size_count = Hash.new(0)
+    # 0 is always colored
     size_count['0 Bytes'.uncolor] = sizes.count * -1 + 1
+    # must be 2 or more in order to be uncolored
+    size_count['min repetitions to color'] = 2
+    # initialize all sizes in size count
+    sizes.each do |_size_type, size|
+      size_count[size] = 0 unless size_count.include? size
+    end
     sizes.each do |_size_type, size|
       size_count[size.dup] += 1
     end
@@ -116,6 +139,13 @@ class Episode
     sizes.each do |size_type, size|
       sizes[size_type] = size.paint unless size_count[size] == max_size_count
     end
+
+    biggest_size_names.each do |biggest_size_name|
+      # drop @ and convert to symbol
+      sizes[biggest_size_name[1..-1].to_sym].uncolor
+    end
+    # puts biggest_sizes.inspect
+
 
     name = File.basename(@name, '.*').cyan
     str = "#{name}:"
