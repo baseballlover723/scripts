@@ -1,10 +1,27 @@
 require 'mediainfo'
 require 'concurrent'
-require 'json'
+require 'colorize'
+require 'active_support/core_ext/string/indent'
 
-PATH = '/mnt/g/anime'
+PATH = '/mnt/d/anime'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
+# not light for work around with ansi colors in the log file
+COLORS = {360 => :yellow, 480 => :magenta, 720 => :cyan, 1080 => :green, :other => :red}
+
+class String
+  def uncolor
+    replace self.light_black
+  end
+
+  def paint(size)
+    if COLORS.include? size
+      replace send(COLORS[size]).bold
+    else
+      concat(" (#{size}p)").send(COLORS[:other]).bold
+    end
+  end
+end
 
 class Anime
   attr_accessor :name, :seasons
@@ -18,16 +35,6 @@ class Anime
     @seasons[season.name] = season
   end
 
-  def inspect
-    @seasons.size == 1 ? @seasons.values.first.inspect : @seasons
-  end
-
-  def to_json(state)
-    seasons = {resolutions: resolutions}
-    seasons.merge! @seasons
-    @seasons.size == 1 ? @seasons.values.first.to_json(state) : seasons.to_json(state)
-  end
-
   def resolutions
     @seasons.values.map(&:resolutions).inject({}) { |h1, h2| h1.merge(h2) { |res, count1, count2| count1+count2 } }
   end
@@ -39,28 +46,24 @@ class Season
   def initialize(anime, name)
     @anime = anime
     @name = name
-    @episodes = Hash.new { |h, k| h[k] = [] }
+    @episodes = {}
     anime.add_season self
   end
 
   def add_episode(episode)
-    @episodes[episode.resolution] << episode
+    @episodes[episode.name] = episode
   end
 
   def resolutions
     hash = Hash.new(0)
-    @episodes.each do |resolution, episodes|
-      hash[resolution] = episodes.size
+    @episodes.each do |_name, episode|
+      hash[episode.resolution] += 1
     end
     hash
   end
 
-  def inspect
-    @name == 'root' ? {resolutions: resolutions, episodes: @episodes} : {name: @name, resolutions: resolutions, episodes: @episodes}
-  end
-
-  def to_json(state)
-    (@name == 'root' ? {resolutions: resolutions, episodes: @episodes} : {name: @name, resolutions: resolutions, episodes: @episodes}).to_json
+  def highest_resolution
+    resolutions.keys.max
   end
 end
 
@@ -74,12 +77,9 @@ class Episode
     season.add_episode self
   end
 
-  def inspect
-    @name.chomp('.mp4')
-  end
-
-  def to_json(state)
-    '"' + @name.chomp('.mp4') + '"'
+  def to_s
+    name = "#{File.basename(@name, '.*')} (#{resolution}p)"
+    name.paint @resolution
   end
 end
 
@@ -88,6 +88,15 @@ def main
 
   count = 0
   pool = Concurrent::FixedThreadPool.new(8)
+  watched_shows = Dir.entries PATH + '/zWatched', OPTS
+  watched_shows.each do |show|
+    next if show == '.' || show == '..' || show == 'desktop.ini'
+    pool.post do
+      analyze_show show, PATH + '/zWatched'
+    end
+    count += 1
+    # break if count > 4
+  end
   shows.each do |show|
     next if show == '.' || show == '..' || show == 'zWatched'
     # count += 1 and next if count < 4
@@ -96,13 +105,6 @@ def main
     end
     count += 1
     # break if count > 4
-  end
-  watched_shows = Dir.entries PATH + '/zWatched', OPTS
-  watched_shows.each do |show|
-    next if show == '.' || show == '..' || show == 'desktop.ini'
-    pool.post do
-      analyze_show show, PATH + '/zWatched'
-    end
   end
   pool.shutdown
   pool.wait_for_termination
@@ -117,7 +119,7 @@ def analyze_show(show, path)
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
     analyze_show(entry, path + '/' + anime.name) and next if nested_show? entry
     if File.directory?("#{path}/#{anime.name}/#{entry}")
-        analyze_season Season.new(anime, entry), path
+      analyze_season Season.new(anime, entry), path
     else
       analyze_episode root_season, entry, path
     end
@@ -131,7 +133,6 @@ end
 def analyze_season(season, path)
   entries = Dir.entries "#{path}/#{season.anime.name}/#{season.name}", OPTS
   entries.each do |entry|
-    # puts entry
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
     analyze_episode season, entry, path
   end
@@ -149,13 +150,78 @@ def nested_show?(show)
   nested_shows.include? show
 end
 
+class DoublePrinter
+  def initialize(*targets)
+    @targets = targets
+  end
+
+  def print(*args)
+    @targets.each { |t| t.print(*args) }
+  end
+
+  def puts(*args)
+    @targets.each { |t| t.puts(*args) }
+  end
+
+  def close
+    @targets.each(&:close)
+  end
+end
+
+def trim_results
+  RESULTS.each do |_, anime|
+    anime.seasons.each do |_, season|
+      anime.seasons.delete(season.name) if season.resolutions.size == 1
+    end
+    RESULTS.delete(anime.name) if anime.seasons.empty?
+  end
+end
+
+def print_results
+  File.open('resolution_log.log', 'w') do |log_file|
+    log = DoublePrinter.new $stdout, log_file
+    original_verbosity = $VERBOSE
+    $VERBOSE = nil
+    cols = `tput cols`.to_i
+    $VERBOSE = original_verbosity
+    log.print '360p'.paint 360
+    log.print ' 480p'.paint 480
+    log.print ' 720p'.paint 720
+    log.print ' 1080p'.paint 1080
+    log.puts ' highest'.uncolor
+
+    shows = RESULTS.values.sort_by(&:name)
+    shows.each do |show|
+      log.puts show.name
+      show.seasons.each_value do |season|
+        log.puts season.name.indent 4 unless season.name == 'root'
+        indent_size = season.name == 'root' ? 4 : 8
+        highest_resolution = season.highest_resolution
+        str = ''
+        episodes = season.episodes.values.sort_by { |e| e.name.to_f == 0 ? 9999 : e.name.to_f }
+        episodes.each do |episode|
+          episode_str = episode.to_s
+          episode_str.uncolor if episode.resolution == highest_resolution
+          if (str + "#{episode_str}, ").uncolorize.length + indent_size < cols
+            str += "#{episode_str}, "
+          else
+            log.puts str.indent indent_size
+            str = "#{episode_str}, "
+          end
+        end
+        log.puts str.indent indent_size
+      end
+    end
+  end
+end
+
 start = Time.now
 main
-RESULTS.reject! { |a| RESULTS[a].resolutions.size == 1 }
-File.open("anime.json", "w") do |f|
-  f.write(JSON.pretty_generate(RESULTS))
-  # f.write(RESULTS)
-end
-puts RESULTS
+trim_results
+print_results
 finish = Time.now
-puts "took #{finish - start} seconds"
+File.open('resolution_log.log', 'a') do |log_file|
+  log = DoublePrinter.new $stdout, log_file
+  log.puts "took #{finish - start} seconds"
+end
+print "\a"
