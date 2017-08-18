@@ -15,11 +15,8 @@ class String
   end
 
   def paint(size)
-    if COLORS.include? size
-      replace send(COLORS[size]).bold
-    else
-      concat(" (#{size}p)").send(COLORS[:other]).bold
-    end
+    color_key = COLORS.include?(size) ? size : :other
+    replace send(COLORS[color_key]).bold
   end
 end
 
@@ -178,7 +175,7 @@ def trim_results
 end
 
 def print_results
-  File.open('resolution_log.log', 'w') do |log_file|
+  File.open('resolutions_log.log', 'w') do |log_file|
     log = DoublePrinter.new $stdout, log_file
     original_verbosity = $VERBOSE
     $VERBOSE = nil
@@ -220,7 +217,7 @@ main
 trim_results
 print_results
 finish = Time.now
-File.open('resolution_log.log', 'a') do |log_file|
+File.open('resolutions_log.log', 'a') do |log_file|
   log = DoublePrinter.new $stdout, log_file
   log.puts "took #{finish - start} seconds"
 end
