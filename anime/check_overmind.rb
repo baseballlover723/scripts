@@ -1,6 +1,7 @@
 REMOTE = !ARGV.empty?
 LOCAL_PATH = '/mnt/d/anime'
 EXTERNAL_PATH = '/mnt/g/anime'
+TEMP_PATH = '/mnt/e/anime'
 REMOTE_PATH = '../../raided/anime'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
@@ -18,6 +19,7 @@ if ARGV.empty?
   $included << 'local'
   $included << 'remote'
   $included << 'external' if File.directory? EXTERNAL_PATH
+  # $included << 'temp' if File.directory? TEMP_PATH
   puts 'skipping overmind' unless $included.include? 'remote'
   puts 'skipping external' unless $included.include? 'external'
 
@@ -48,6 +50,11 @@ class ExternalString < String
   end
 end
 
+class TempString < String
+  def paint
+    replace self.light_yellow
+  end
+end
 
 class Anime
   attr_accessor :name, :seasons
@@ -78,7 +85,7 @@ class Season
 end
 
 class Episode
-  attr_accessor :season, :name, :local_size, :remote_size, :external_size
+  attr_accessor :season, :name, :local_size, :remote_size, :external_size, :temp_size
 
   def initialize(season, name)
     @season = season
@@ -86,7 +93,18 @@ class Episode
     @local_size = 0
     @remote_size = 0
     @external_size = 0
+    @temp_size = 0
     season.add_episode self
+  end
+
+  def biggest_size
+    biggest_value = 0
+    instance_variables.each do |instance_var|
+      next unless instance_var.to_s.end_with?('size')
+      value = instance_variable_get instance_var
+      biggest_value = value if value > biggest_value
+    end
+    biggest_value
   end
 
   def biggest_size_names
@@ -110,6 +128,7 @@ class Episode
     sizes[:local_size] = LocalString.new(h_size(@local_size)).uncolor if $included.include? 'local'
     sizes[:remote_size] = RemoteString.new(h_size(@remote_size)).uncolor if $included.include? 'remote'
     sizes[:external_size] = ExternalString.new(h_size(@external_size)).uncolor if $included.include? 'external'
+    sizes[:temp_size] = TempString.new(h_size(@temp_size)).uncolor if $included.include? 'temp'
     sizes
   end
 
@@ -126,6 +145,11 @@ class Episode
     size_count['0 Bytes'.uncolor] = sizes.count * -1 + 1
     # must be 2 or more in order to be uncolored
     size_count['min repetitions to color'] = 2
+    biggest_size_names.each do |biggest_size_name|
+      # drop @ and convert to symbol
+      size_count[sizes[biggest_size_name[1..-1].to_sym].uncolor] = sizes.count
+    end
+
     # initialize all sizes in size count
     sizes.each do |_size_type, size|
       size_count[size] = 0 unless size_count.include? size
@@ -137,21 +161,19 @@ class Episode
     # color if not the most common (0 always colored)
     max_size_count = size_count.values.max
     sizes.each do |size_type, size|
-      sizes[size_type] = size.paint unless size_count[size] == max_size_count
+      if size_count[size] == max_size_count
+        sizes[size_type] = size.uncolor
+      else
+        sizes[size_type] = size.paint
+      end
     end
-
-    biggest_size_names.each do |biggest_size_name|
-      # drop @ and convert to symbol
-      sizes[biggest_size_name[1..-1].to_sym].uncolor
-    end
-    # puts biggest_sizes.inspect
-
 
     name = File.basename(@name, '.*').cyan
     str = "#{name}:"
     str << " #{sizes[:local_size]}" if sizes.has_key? :local_size
     str << " (#{sizes[:remote_size]})" if sizes.has_key? :remote_size
     str << " [#{sizes[:external_size]}]" if sizes.has_key? :external_size
+    str << " {#{sizes[:temp_size]}}" if sizes.has_key? :temp_size
     str
   end
 end
@@ -183,6 +205,11 @@ def main
     iterate EXTERNAL_PATH, 'external'
     iterate EXTERNAL_PATH + '/zWatched', 'external'
   end
+  if $included.include? 'temp'
+    puts 'running on temp'
+    iterate TEMP_PATH, 'temp'
+    iterate TEMP_PATH + '/zWatched', 'temp'
+  end
 end
 
 def iterate(path, type)
@@ -190,6 +217,7 @@ def iterate(path, type)
   count = 0
   shows.each do |show|
     next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini'
+    # next unless show.start_with?('C')
     analyze_show show, path + '/' + show, type
     count += 1
     # break if count > 5
@@ -257,7 +285,13 @@ def trim_results
           sizes << episode.send("#{type}_size")
         end
         season.episodes.delete(episode.name) if sizes.size == 1
-
+        if sizes.size == 2 && $included.include?('temp')
+          non_temp_sizes = Set.new
+          $included.each do |type|
+            non_temp_sizes << episode.send("#{type}_size") unless type == 'temp'
+          end
+          season.episodes.delete(episode.name) if non_temp_sizes.size == 1
+        end
       end
       show.seasons.delete(season.name) if season.episodes.size == 0
       # show.seasons.delete(season.name) if season.episodes.size > 10 # TODO delete
