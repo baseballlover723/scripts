@@ -1,6 +1,10 @@
 REMOTE = !ARGV.empty?
 LOCAL_PATH = '/mnt/d/anime'
 EXTERNAL_PATH = '/mnt/g/anime'
+LONG_EXTERNAL_PATH = '/mnt/f/anime'
+# LOCAL_PATH = '/mnt/c/Users/Philip Ross/Downloads/test/local'
+# EXTERNAL_PATH = '/mnt/c/Users/Philip Ross/Downloads/test/external'
+# LONG_EXTERNAL_PATH = '/mnt/c/Users/Philip Ross/Downloads/test/long_external'
 TEMP_PATH = '/mnt/e/anime'
 REMOTE_PATH = '../../raided/anime'
 OPTS = {encoding: 'UTF-8'}
@@ -18,8 +22,8 @@ if ARGV.empty?
   $included = Set.new
   $included << 'local'
   $included << 'remote'
-  $included << 'external' if File.directory? EXTERNAL_PATH
-  # $included << 'temp' if File.directory? TEMP_PATH
+  $included << 'external' if File.directory?(EXTERNAL_PATH)
+  $included << 'long_external' if File.directory?(LONG_EXTERNAL_PATH)
   puts 'skipping overmind' unless $included.include? 'remote'
   puts 'skipping external' unless $included.include? 'external'
 
@@ -50,7 +54,7 @@ class ExternalString < String
   end
 end
 
-class TempString < String
+class LongExternalString < String
   def paint
     replace self.light_yellow
   end
@@ -85,7 +89,7 @@ class Season
 end
 
 class Episode
-  attr_accessor :season, :name, :local_size, :remote_size, :external_size, :temp_size
+  attr_accessor :season, :name, :local_size, :remote_size, :external_size, :long_external_size, :external_size_extra
 
   def initialize(season, name)
     @season = season
@@ -93,9 +97,25 @@ class Episode
     @local_size = 0
     @remote_size = 0
     @external_size = 0
-    @temp_size = 0
+    @long_external_size = 0
     season.add_episode self
   end
+
+  def in_both_external
+    @external_size != 0 && @long_external_size != 0
+  end
+
+  def only_external
+    @external_size != 0 ? @external_size : @long_external_size
+  end
+
+  # def external_size=(size)
+  #   if @external_size == 0
+  #     @external_size = size
+  #   else
+  #     @external_size_extra = size
+  #   end
+  # end
 
   def biggest_size
     biggest_value = 0
@@ -128,7 +148,7 @@ class Episode
     sizes[:local_size] = LocalString.new(h_size(@local_size)).uncolor if $included.include? 'local'
     sizes[:remote_size] = RemoteString.new(h_size(@remote_size)).uncolor if $included.include? 'remote'
     sizes[:external_size] = ExternalString.new(h_size(@external_size)).uncolor if $included.include? 'external'
-    sizes[:temp_size] = TempString.new(h_size(@temp_size)).uncolor if $included.include? 'temp'
+    sizes[:long_external_size] = LongExternalString.new(h_size(@long_external_size)).uncolor if $included.include? 'long_external'
     sizes
   end
 
@@ -167,13 +187,20 @@ class Episode
         sizes[size_type] = size.paint
       end
     end
+    sizes[:external_size] = sizes[:external_size].paint if in_both_external
+    sizes[:long_external_size] = sizes[:long_external_size].paint if in_both_external
 
     name = File.basename(@name, '.*').cyan
     str = "#{name}:"
     str << " #{sizes[:local_size]}" if sizes.has_key? :local_size
     str << " (#{sizes[:remote_size]})" if sizes.has_key? :remote_size
-    str << " [#{sizes[:external_size]}]" if sizes.has_key? :external_size
-    str << " {#{sizes[:temp_size]}}" if sizes.has_key? :temp_size
+    both_zero = external_size == long_external_size && external_size == 0
+    # str << " [both]" if both_zero && (sizes.has_key?(:external_size) || sizes.has_key?(:long_external_size))
+    str << " [#{sizes[:external_size]}]" if both_zero && (sizes.has_key?(:external_size) || sizes.has_key?(:long_external_size))
+    str << " [#{sizes[:external_size]}]" if !both_zero && sizes.has_key?(:external_size) && external_size != 0
+    str << ' &' if in_both_external
+    str << " {#{sizes[:long_external_size]}}" if !both_zero && sizes.has_key?(:long_external_size) && long_external_size != 0
+    str << @external_size_extra.to_s
     str
   end
 end
@@ -205,10 +232,10 @@ def main
     iterate EXTERNAL_PATH, 'external'
     iterate EXTERNAL_PATH + '/zWatched', 'external'
   end
-  if $included.include? 'temp'
-    puts 'running on temp'
-    iterate TEMP_PATH, 'temp'
-    iterate TEMP_PATH + '/zWatched', 'temp'
+  if $included.include? 'long_external'
+    puts 'running on long external'
+    iterate LONG_EXTERNAL_PATH, 'long_external'
+    iterate LONG_EXTERNAL_PATH + '/zWatched', 'long_external'
   end
 end
 
@@ -230,7 +257,7 @@ def analyze_show(show, path, type)
   root_season = find_season anime, 'root'
   entries = Dir.entries path, OPTS
   entries.each do |entry|
-    next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
+    next if entry == '.' || entry == '..' || entry == 'desktop.ini' # || entry.end_with?('.txt')
     analyze_show(entry, path + '/' + entry, type) and next if nested_show? entry
     if File.directory?("#{path}/#{entry}")
       analyze_season find_season(anime, entry), path + '/' + entry, type
@@ -281,17 +308,20 @@ def trim_results
     show.seasons.each_value do |season|
       season.episodes.each_value do |episode|
         sizes = Set.new
-        $included.each do |type|
+        included = $included.dup
+        included.delete('external') if episode.external_size != episode.long_external_size && episode.external_size == 0
+        included.delete('long_external') if episode.external_size != episode.long_external_size && episode.long_external_size == 0
+        included.each do |type|
           sizes << episode.send("#{type}_size")
         end
         season.episodes.delete(episode.name) if sizes.size == 1
-        if sizes.size == 2 && $included.include?('temp')
-          non_temp_sizes = Set.new
-          $included.each do |type|
-            non_temp_sizes << episode.send("#{type}_size") unless type == 'temp'
-          end
-          season.episodes.delete(episode.name) if non_temp_sizes.size == 1
-        end
+        # if sizes.size == 2 && $included.include?('long_external')
+        #   non_long_external_sizes = Set.new
+        #   $included.each do |type|
+        #     non_long_external_sizes << episode.send("#{type}_size") unless type == 'long_external'
+        #   end
+          season.episodes.delete(episode.name) if sizes.size == 1 #if non_long_external_sizes.size == 1
+        # end
       end
       show.seasons.delete(season.name) if season.episodes.size == 0
       # show.seasons.delete(season.name) if season.episodes.size > 10 # TODO delete
@@ -316,6 +346,14 @@ def print_results
     print ExternalString.new("external size").paint
     print "]"
   end
+  if $included.include?('long_external') && $included.include?('external')
+    print " |"
+  end
+  if $included.include?('long_external')
+    print " {"
+    print LongExternalString.new("long external size").paint
+    print "}"
+  end
   print " unchanged".uncolor
   print "\n"
 
@@ -326,7 +364,7 @@ def print_results
       puts season.name.indent 4 unless season.name == 'root'
       indent_size = season.name == 'root' ? 4 : 8
       str = ''
-      episodes = season.episodes.values.sort_by { |e| e.name.to_f == 0 ? 9999 : e.name.to_f }
+      episodes = season.episodes.values.sort_by {|e| e.name.to_f == 0 ? 9999 : e.name.to_f}
       episodes.each do |episode|
         episode_str = episode.to_s
         if (str + "#{episode_str}, ").uncolorize.length + indent_size < cols
