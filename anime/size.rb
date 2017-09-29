@@ -56,7 +56,7 @@ def directory_size(path)
 end
 
 def calculate_size(show)
-  puts "calculating size for #{show}"
+  print "\rcalculating size for #{show}".ljust(120)
   size = directory_size "#{PATH}/#{show}"
   if SHOWS.include? show
     anime = SHOWS[show]
@@ -76,4 +76,13 @@ File.open('./anime.txt', 'w') do |file|
   end
 end
 RESULTS.sort_by!(&:bytes).reverse!
-puts RESULTS
+print "\r".ljust(120)
+print "\r"
+total = 0
+RESULTS.each do |result|
+  break if result.bytes < 1024 * 1024 * 1024 * 20
+  puts result
+  total += result.bytes
+end
+a = Anime.new('total', total)
+puts a
