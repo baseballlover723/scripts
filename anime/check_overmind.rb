@@ -101,7 +101,7 @@ class Episode
     season.add_episode self
   end
 
-  def in_both_external
+  def in_both_external?
     @external_size != 0 && @long_external_size != 0
   end
 
@@ -187,8 +187,8 @@ class Episode
         sizes[size_type] = size.paint
       end
     end
-    sizes[:external_size] = sizes[:external_size].paint if in_both_external
-    sizes[:long_external_size] = sizes[:long_external_size].paint if in_both_external
+    sizes[:external_size] = sizes[:external_size].paint if in_both_external?
+    sizes[:long_external_size] = sizes[:long_external_size].paint if in_both_external?
 
     name = File.basename(@name, '.*').cyan
     str = "#{name}:"
@@ -198,7 +198,7 @@ class Episode
     # str << " [both]" if both_zero && (sizes.has_key?(:external_size) || sizes.has_key?(:long_external_size))
     str << " [#{sizes[:external_size]}]" if both_zero && (sizes.has_key?(:external_size) || sizes.has_key?(:long_external_size))
     str << " [#{sizes[:external_size]}]" if !both_zero && sizes.has_key?(:external_size) && external_size != 0
-    str << ' &' if in_both_external
+    str << ' &' if in_both_external?
     str << " {#{sizes[:long_external_size]}}" if !both_zero && sizes.has_key?(:long_external_size) && long_external_size != 0
     str << @external_size_extra.to_s
     str
@@ -303,6 +303,23 @@ def find_episode(season, name)
   season.episodes[name] || Episode.new(season, name)
 end
 
+def find_dups
+  dups = Set.new
+  RESULTS.each_value do |show|
+    dups << show if find_show_dups show
+  end
+  dups
+end
+
+def find_show_dups(show)
+  show.seasons.each_value do |season|
+    season.episodes.each_value do |episode|
+      return true if episode.in_both_external?
+    end
+  end
+  false
+end
+
 def trim_results
   RESULTS.each_value do |show|
     show.seasons.each_value do |season|
@@ -320,7 +337,7 @@ def trim_results
         #   $included.each do |type|
         #     non_long_external_sizes << episode.send("#{type}_size") unless type == 'long_external'
         #   end
-          season.episodes.delete(episode.name) if sizes.size == 1 #if non_long_external_sizes.size == 1
+        season.episodes.delete(episode.name) if sizes.size == 1 #if non_long_external_sizes.size == 1
         # end
       end
       show.seasons.delete(season.name) if season.episodes.size == 0
@@ -379,11 +396,22 @@ def print_results
   end
 end
 
+def print_dups(dups)
+  puts ''
+  if dups.empty?
+    puts "There are no shows in both externals".light_green
+  else
+    puts "These shows are in both externals #{dups.map(&:name)}".light_red
+  end
+end
+
 if ARGV.empty?
   start = Time.now
   main
+  dups = find_dups
   trim_results
   print_results
+  print_dups dups
   puts "Took #{Time.now - start} seconds"
 else
   remote_main
