@@ -281,6 +281,8 @@ end
 def analyze_episode(season, episode_name, path, type)
   episode_name.chomp!('.filepart')
   episode_name.chomp!('.crdownload')
+  episode_name.chomp! '.mp4'
+  episode_name.chomp! '.mkv'
   episode = find_episode season, episode_name
   episode.send(type + '_size=', File.size(path))
 end
