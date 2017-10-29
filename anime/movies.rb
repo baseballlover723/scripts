@@ -5,6 +5,7 @@ REMOTE_PATHES = {movies: '../../raided/movies', tv: '../../raided/tv'}
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {movies: {}, tv: {}, local: {}}
 MOVIE_EXTENSIONS = ['.mkv', '.mp4', '.m4v']
+BLACKLIST = ['anime', 'Naruto', 'Naruto - Copy']
 
 if ARGV.empty?
   require 'dotenv/load'
@@ -49,12 +50,33 @@ class ExternalString < String
   end
 end
 
-class Show
-  attr_accessor :name, :seasons
+class ShowGroup
+  attr_accessor :name, :shows
 
-  def initialize(name)
+  def initialize(name, ignore)
+    @name = name
+    @shows = {}
+    @ignore = !!ignore
+  end
+
+  def add_show(show)
+    @shows[show.name] = show
+  end
+
+  def ignore?
+    @ignore
+  end
+end
+
+class Show
+  attr_accessor :show_group, :name, :seasons
+
+  def initialize(show_group, name)
+    @show_group = show_group
     @name = name
     @seasons = {}
+
+    show_group.add_show self
   end
 
   def add_season(season)
@@ -203,20 +225,36 @@ def iterate(path, location, type)
   shows.each do |show_name|
     next if show_name == '.' || show_name == '..' || show_name == 'zWatched' || show_name == 'desktop.ini'
     next unless File.directory? path + '/' + show_name
+    next if BLACKLIST.include? show_name
     # next unless show.start_with?('C')
-    analyze_show show_name, path + '/' + show_name, location, type
+    analyze_show_group show_name, path + '/' + show_name, location, type
     count += 1
     # break if count > 2
   end
 end
 
-def analyze_show(show_name, path, location, type)
-  show = find_show(show_name, type)
+def analyze_show_group(name, path, location, type)
+  show_group = find_show_group name, type
+  if show_group.ignore?
+    analyze_show show_group, name, path, location, type
+    return
+  end
+
+  entries = Dir.entries path, OPTS
+  entries.each do |entry|
+    next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
+    analyze_show show_group, entry, path + '/' + entry, location, type
+  end
+end
+
+def analyze_show(show_group, show_name, path, location, type)
+  # iterate(path, location, type) if nested_folder? show_name
+  # (analyze_show_group(show_name, path, location, type); return) if show_group? show_name
+  show = find_show(show_group, show_name)
   root_season = find_season show, 'root'
   entries = Dir.entries path, OPTS
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-    analyze_show(entry, path + '/' + entry, location, type) and next if nested_show? entry
     if File.directory?("#{path}/#{entry}")
       analyze_season find_season(show, entry), path + '/' + entry, location
     else
@@ -244,9 +282,19 @@ def analyze_episode(season, episode_name, path, location)
   episode.send(location + '_size=', File.size(path))
 end
 
+def show_group?(name)
+  # matches (####) [####.]
+  !name.match /\(\d{4}\) \[\d+.\]/
+end
+
 def nested_show?(show)
   nested_shows = ['A Certain Scientific Railgun', 'The Legend of Korra']
   nested_shows.include? show
+end
+
+def nested_folder?(show_name)
+  nested_folders = ['Marvel']
+  nested_folders.include? show_name
 end
 
 def remote_main
@@ -256,18 +304,22 @@ def remote_main
   puts Marshal::dump(RESULTS)
 end
 
-def find_show(show_name, type)
+def find_show_group(show_group_name, type)
   if type == :local
-    type = :movies if RESULTS[:movies].include? show_name
-    type = :tv if RESULTS[:tv].include? show_name
+    type = :movies if RESULTS[:movies].include? show_group_name
+    type = :tv if RESULTS[:tv].include? show_group_name
   end
-  show = RESULTS[type][show_name] || Show.new(show_name)
-  RESULTS[type][show.name] = show
-  show
+  show_group = RESULTS[type][show_group_name] || ShowGroup.new(show_group_name, (type != :movies) || !show_group?(show_group_name))
+  RESULTS[type][show_group.name] = show_group
+  show_group
 end
 
-def find_season(anime, name)
-  anime.seasons[name] || Season.new(anime, name)
+def find_show(show_group, name)
+  show_group.shows[name] || Show.new(show_group, name)
+end
+
+def find_season(show, name)
+  show.seasons[name] || Season.new(show, name)
 end
 
 def find_episode(season, name)
@@ -276,26 +328,29 @@ end
 
 def trim_results
   RESULTS.each_value do |results|
-    results.each_value do |show|
-      show.seasons.each_value do |season|
-        season.episodes.each_value do |episode|
-          sizes = Set.new
-          $included.each do |location|
-            sizes << episode.send("#{location}_size")
-          end
-          season.episodes.delete(episode.name) if sizes.size == 1
-          if sizes.size == 2 && $included.include?('local')
-            non_local_sizes = Set.new
+    results.each_value do |show_group|
+      show_group.shows.each_value do |show|
+        show.seasons.each_value do |season|
+          season.episodes.each_value do |episode|
+            sizes = Set.new
             $included.each do |location|
-              non_local_sizes << episode.send("#{location}_size") unless location == 'local'
+              sizes << episode.send("#{location}_size")
             end
-            season.episodes.delete(episode.name) if non_local_sizes.size == 1
+            season.episodes.delete(episode.name) if sizes.size == 1
+            if sizes.size == 2 && $included.include?('local')
+              non_local_sizes = Set.new
+              $included.each do |location|
+                non_local_sizes << episode.send("#{location}_size") unless location == 'local'
+              end
+              season.episodes.delete(episode.name) if non_local_sizes.size == 1 && non_local_sizes.none? {|s| s == 0}
+            end
           end
+          show.seasons.delete(season.name) if season.episodes.empty?
+          # show.seasons.delete(season.name) if season.episodes.size > 10 # TODO delete
         end
-        show.seasons.delete(season.name) if season.episodes.size == 0
-        # show.seasons.delete(season.name) if season.episodes.size > 10 # TODO delete
+        show_group.shows.delete(show.name) if show.seasons.empty?
       end
-      results.delete(show.name) if show.seasons.size == 0
+      results.delete show_group.name if show_group.shows.empty?
     end
   end
 end
@@ -303,7 +358,7 @@ end
 def print_results
   original_verbosity = $VERBOSE
   $VERBOSE = nil
-  cols = `tput cols`.to_i
+  $cols = `tput cols`.to_i
   $VERBOSE = original_verbosity
   print LocalString.new("local size").paint if $included.include? 'local'
   if $included.include? 'remote'
@@ -319,30 +374,62 @@ def print_results
   print " unchanged".uncolor
   print "\n"
 
+
   RESULTS.each do |type, results|
     puts type.to_s.light_yellow
-    shows = results.values.sort_by(&:name)
-    shows.each do |show|
-      puts show.name.indent 2
-      show.seasons.each_value do |season|
-        puts season.name.indent 6 unless season.name == 'root'
-        indent_size = season.name == 'root' ? 6 : 10
+    show_groups = results.values.sort_by(&:name)
+    show_groups.each do |show_group|
+      show_group.print
+    end
+  end
+end
+
+class ShowGroup
+  def print
+    indent(ignore? ? 0 : 2) do
+      puts name.indent($indent_size) unless ignore?
+      shows.each_value &:print
+    end
+  end
+end
+
+class Show
+  def print
+    indent do
+      puts name.indent $indent_size
+      @seasons.each_value &:print
+    end
+  end
+end
+
+class Season
+  def print
+    indent(name == 'root' ? 0 : 4) do
+      puts name.indent $indent_size unless name == 'root'
+      indent(4) do
         str = ''
-        episodes = season.episodes.values.sort_by {|e| e.name.to_f == 0 ? 9999 : e.name.to_f}
+        episodes = @episodes.values.sort_by {|e| e.name.to_f == 0 ? 9999 : e.name.to_f}
         episodes.each do |episode|
           episode_str = episode.to_s
-          if (str + "#{episode_str}, ").uncolorize.length + indent_size < cols
+          if (str + "#{episode_str}, ").uncolorize.length + $indent_size < $cols
             str += "#{episode_str}, "
           else
-            puts str.indent indent_size
+            puts str.indent $indent_size
             str = "#{episode_str}, "
           end
         end
-        puts str.indent indent_size
+        puts str.indent $indent_size
       end
     end
   end
+end
 
+$indent_size = 0
+
+def indent(numb=2)
+  $indent_size += numb
+  yield
+  $indent_size -= numb
 end
 
 if ARGV.empty?
