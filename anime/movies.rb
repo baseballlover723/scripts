@@ -4,7 +4,7 @@ EXTERNAL_PATHES = {movies: '/mnt/e/movies', tv: '/mnt/e/tv'}
 REMOTE_PATHES = {movies: '../../raided/movies', tv: '../../raided/tv'}
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {movies: {}, tv: {}, local: {}}
-MOVIE_EXTENSIONS = ['.mkv', '.mp4', '.m4v']
+MOVIE_EXTENSIONS = ['.mkv', '.mp4', '.m4v', '.srt', '.avi']
 BLACKLIST = ['anime', 'Naruto', 'Naruto - Copy']
 
 if ARGV.empty?
@@ -65,6 +65,10 @@ class ShowGroup
 
   def ignore?
     @ignore
+  end
+
+  def inspect
+    "name: #{name}"
   end
 end
 
@@ -181,7 +185,8 @@ class Episode
       end
     end
 
-    name = File.basename(@name, '.*').cyan
+    # name = File.basename(@name, '.*').cyan
+    name = @name.cyan
     str = "#{name}:"
     str << " #{sizes[:local_size]}" if sizes.has_key? :local_size
     str << " (#{sizes[:remote_size]})" if sizes.has_key? :remote_size
@@ -193,7 +198,7 @@ end
 def main
   if $included.include? 'remote'
     begin
-      Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1) do |ssh|
+      Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
         ssh.sftp.connect do |sftp|
           sftp.upload!(__FILE__, "remote.rb")
         end
@@ -327,6 +332,24 @@ def find_episode(season, name)
 end
 
 def trim_results
+  shows = {}
+  [RESULTS[:movies], RESULTS[:tv]].each do |results|
+    results.each_value do |show_group|
+      show_group.shows.each_value do |show|
+        if show.name == 'BBC Natural History Unit'
+          # show.seasons.each do
+        else
+          shows[show.name] = show
+        end
+      end
+    end
+  end
+
+
+  # puts shows.size
+  # puts shows.class
+  # puts shows.values.map(&:name).inspect
+
   RESULTS.each_value do |results|
     results.each_value do |show_group|
       show_group.shows.each_value do |show|
@@ -382,6 +405,27 @@ def print_results
       show_group.print
     end
   end
+
+  if $included.include?('remote') && $included.include?('external')
+    remote = 0
+    external = 0
+    RESULTS.each_value do |show_groups|
+      show_groups.each_value do |show_group|
+        show_group.shows.each_value do |show|
+          show.seasons.each_value do |season|
+            season.episodes.each_value do |episode|
+              remote += episode.remote_size
+              external += episode.external_size
+            end
+          end
+        end
+      end
+    end
+    transfer = ActiveSupport::NumberHelper.number_to_human_size(external - remote, {precision: 5, strip_insignificant_zeros: false})
+    kilobytes_per_sec = 1400
+    est = (external - remote) / (1024 * kilobytes_per_sec)
+    puts "Need to transfer #{transfer.light_cyan}: EST: #{to_human_duration(est).light_cyan} (#{kilobytes_per_sec} KB/s)"
+  end
 end
 
 class ShowGroup
@@ -430,6 +474,19 @@ def indent(numb=2)
   $indent_size += numb
   yield
   $indent_size -= numb
+end
+
+def to_human_duration(time)
+  mm, ss = time.divmod(60)
+  hh, mm = mm.divmod(60)
+  dd, hh = hh.divmod(24)
+  str = ""
+  str << "#{dd} days, " if dd > 0
+  str << "#{hh} hours, " if hh > 0
+  str << "#{mm} minutes, " if mm > 0
+  str << "#{ss} seconds, " if ss > 0
+  str = str[0..-3]
+  str.reverse.sub(" ,", " and ".reverse).reverse
 end
 
 if ARGV.empty?
