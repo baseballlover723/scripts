@@ -208,7 +208,7 @@ end
 def main
   if $included.include? 'remote'
     begin
-      Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1) do |ssh|
+      Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
         ssh.sftp.connect do |sftp|
           sftp.upload!(__FILE__, "remote.rb")
         end
@@ -279,6 +279,7 @@ def analyze_season(season, path, type)
 end
 
 def analyze_episode(season, episode_name, path, type)
+  return if File.directory? path
   episode_name.chomp!('.filepart')
   episode_name.chomp!('.crdownload')
   episode_name.chomp! '.mp4'
