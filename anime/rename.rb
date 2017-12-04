@@ -1,50 +1,82 @@
 require 'set'
 require 'colorize'
 
-PATH = '/mnt/c/Users/Philip Ross/Downloads/Naruto'
+PATHES = [
+  '/mnt/c/Users/Philip Ross/Downloads/Naruto; Shippūden/*',
+  # '/mnt/c/Users/Philip Ross/Downloads/Accel World',
+  # '../../raided/Naruto/Season 1',
+  # '../../raided/Naruto/Season 2',
+  # '../../raided/Naruto/Season 3',
+  # '../../raided/Naruto/Season 4',
+  # '../../raided/Naruto/Season 5',
+]
+PATHES.each {|p| p << '/' unless p.end_with? '/'}
 OPTS = {encoding: 'UTF-8'}
 RENAME = true
 RESULTS = []
+ANIME = false
+IGNORE_PREFIX = '[bonkai77]'
 
 def main
-  rename_show PATH, false
-  has_missing = analyze_missing
-  if RENAME && !has_missing
-    rename_show PATH, true
-    puts 'Done renaming'.light_green
-  else
-    puts 'Renaming not enabled'.light_yellow
+  PATHES.each do |path|
+    puts ''
+    rename_show path, false, true
+    has_no_missing = analyze_missing
+    first_number = has_no_missing
+    if !has_no_missing
+      puts 'first number has missing episode numbers'.light_yellow
+      RESULTS.clear
+      rename_show path, false, false
+      has_no_missing = analyze_missing
+      first_number = false
+    end
+
+    if RENAME && has_no_missing
+      rename_show path, true, first_number
+      puts 'Done renaming'.light_green
+    else
+      puts 'Renaming not enabled'.light_yellow
+    end
+    RESULTS.clear
   end
 end
 
-def rename_show(path, rename)
+def rename_show(path, rename, first_number)
+  # TODO change to dir.glob
+  # TODO commit
+  # Dir.glob(escape_glob(path) + '*').sort.each do |f|
+  #   puts f
+  # end
+  # RESULTS << 1
+  # return
   entries = Dir.entries path, OPTS
   count = 0
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini'
     if File.directory?("#{path}/#{entry}")
-      rename_season path + '/' + entry, rename
+      rename_season path + '/' + entry, rename, first_number
     else
-      rename_episode path, entry, rename
+      rename_episode path, entry, rename, first_number
     end
     count += 1
     # break if count > 2
   end
+  puts "\nanalyzing " + (first_number ? 'first number' : 'second number') unless rename
 end
 
-def rename_season(path, rename)
+def rename_season(path, rename, first_number)
   episodes = Dir.entries path, OPTS
   count = 0
   episodes.each do |episode_name|
     next if episode_name == '.' || episode_name == '..' || episode_name == 'desktop.ini'
-    rename_episode path, episode_name, rename
+    rename_episode path, episode_name, rename, first_number
     count += 1
     # break if count > 2
   end
 end
 
-def rename_episode(folder_path, name, rename)
-  episode_number = extract_number name
+def rename_episode(folder_path, name, rename, first_number)
+  episode_number = extract_number name, rename, first_number
   puts "Not renaming '#{name.light_yellow}'" or return unless episode_number
   if rename
     File.rename(folder_path + '/' + name, folder_path + '/' + episode_number.to_s + File.extname(name))
@@ -53,15 +85,37 @@ def rename_episode(folder_path, name, rename)
   end
 end
 
-def extract_number(str)
-  numb = str[/\d+/]
+def extract_number(str, rename, first_number)
+  str = str[IGNORE_PREFIX.length..-1] if str.start_with? IGNORE_PREFIX
+  puts str if !rename && first_number
+  numb = first_number ? str[/\d+/] : str.scan(/\d+/)[1]
+  # numb = str.scan(/\d+/)[1]#[/\d+/]
   return unless numb
   numb = numb.to_i
+
   numb if numb < 1900 # probably a movie
 end
 
+def escape_glob(s)
+  s.gsub(/[\\\{\}\[\]\*\?]/) {|x| "\\"+x}
+end
+
+def yesno(prompt = 'Continue?', default = true)
+  a = ''
+  s = default ? '[Y/n]' : '[y/N]'
+  d = default ? 'y' : 'n'
+  until %w[y n].include? a
+    original_verbosity = $VERBOSE
+    $VERBOSE = nil
+    a = ask("#{prompt} #{s} ") {|q| q.limit = 1; q.case = :downcase}
+    $VERBOSE = original_verbosity
+    a = d if a.length == 0
+  end
+  a == 'y'
+end
+
 def analyze_missing
-  puts ''
+  # puts ''
   missing_episodes_numbers = []
   set = Set.new
   duplicates = RESULTS.select {|e| !set.add?(e)}
@@ -75,7 +129,7 @@ def analyze_missing
   else
     puts "missing episodes: #{missing_episodes_numbers.map(&:to_s).map(&:light_red).join(', ')}"
   end
-  return !missing_episodes_numbers.empty?
+  return missing_episodes_numbers.empty? && duplicates.empty?
 end
 
 main
