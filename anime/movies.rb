@@ -6,6 +6,7 @@ OPTS = {encoding: 'UTF-8'}
 RESULTS = {movies: {}, tv: {}, local: {}}
 MOVIE_EXTENSIONS = ['.mkv', '.mp4', '.m4v', '.srt', '.avi']
 BLACKLIST = ['anime', 'Naruto', 'Naruto - Copy']
+FILTER = /Season \d\d - Episode(s?) \d\d\d-\d\d\d/
 
 if ARGV.empty?
   require 'dotenv/load'
@@ -203,8 +204,13 @@ def main
           sftp.upload!(__FILE__, "remote.rb")
         end
         puts 'running on remote'
-        serialized_results = ssh.exec! "source ~/.rvm/scripts/rvm; ruby remote.rb remote"
-        RESULTS.replace Marshal::load(serialized_results)
+        serialized_results = ssh.exec! "ruby remote.rb remote"
+        begin
+          RESULTS.replace Marshal::load(serialized_results)
+        rescue TypeError => e
+          puts 'Error reading results from remote'
+          puts serialized_results
+        end
         ssh.exec! "rm remote.rb"
       end
     rescue Errno::EAGAIN => e
@@ -231,6 +237,7 @@ def iterate(path, location, type)
     next if show_name == '.' || show_name == '..' || show_name == 'zWatched' || show_name == 'desktop.ini'
     next unless File.directory? path + '/' + show_name
     next if BLACKLIST.include? show_name
+    next if show_name[FILTER]
     # next unless show.start_with?('C')
     analyze_show_group show_name, path + '/' + show_name, location, type
     count += 1
