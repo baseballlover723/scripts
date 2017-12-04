@@ -213,8 +213,13 @@ def main
           sftp.upload!(__FILE__, "remote.rb")
         end
         puts 'running on remote'
-        serialized_results = ssh.exec! "source ~/.rvm/scripts/rvm; ruby remote.rb remote"
-        RESULTS.replace Marshal::load(serialized_results)
+        serialized_results = ssh.exec! "ruby remote.rb remote"
+        begin
+          RESULTS.replace Marshal::load(serialized_results)
+        rescue TypeError => e
+          puts 'Error reading results from remote'
+          puts serialized_results
+        end
         ssh.exec! "rm remote.rb"
       end
     rescue Errno::EAGAIN => e
