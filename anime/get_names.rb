@@ -4,14 +4,15 @@ require 'nokogiri'
 require 'highline/import'
 require 'pry'
 
-URL = "https://en.wikipedia.org/wiki/List_of_Burn_Notice_episodes"
-PATH = "/mnt/c/Users/Philip Ross/Downloads/Burn Notice [720p] {x264}/"
+URL = "https://en.wikipedia.org/wiki/List_of_Agents_of_S.H.I.E.L.D._episodes"
+PATH = "/mnt/c/Users/Philip Ross/Downloads/Marvel's Agents of S.H.I.E.L.D. [1080p] {x265}/"
 # PATH = "/mnt/e/tv/Battlestar Galactica [1080p] {x265}/"
 # PATH = "/raided/tv/Battlestar Galactica [1080p] {x265}"
 PATH << '/' unless PATH.end_with? '/'
 OPTS = {encoding: 'UTF-8'}
 REMOVE_PREFIX = "[snahp.it]"
-REMOVE_SUFFIX_PREFIX = ".720p"
+# make an array
+REMOVE_SUFFIX_PREFIX = /\d{3,4}p/
 
 class String
   def title_case
@@ -38,7 +39,7 @@ def get_episode_names
 
   episodes_by_season = {}
   tables = parsed.css('.wikiepisodetable')[0..14]
-  # tables = parsed.css('.wikitable')[0..5]
+  # tables = parsed.css('.wikitable')[0..4]
   tables.each do |table|
     number_of_previous = 2
     season_header = table
@@ -61,11 +62,13 @@ def get_episode_names
     end
   end
   puts episodes_by_season.pretty_inspect
+  puts('No Episodes found on wiki') || exit if episodes_by_season.empty?
   episodes_by_season
 end
 
 def add_episode_names(path, episodes_by_season)
   puts path
+  has_seasons = false
   seasons = Dir.entries path, OPTS
   seasons.each do |season_str|
     next if season_str == '.' || season_str == '..' || season_str == 'desktop.ini'
@@ -73,6 +76,7 @@ def add_episode_names(path, episodes_by_season)
     next unless season_str.include? 'Season'
     season_number = season_str[/\d+/].to_i
     next unless episodes_by_season[season_number]
+    has_seasons = true
     # next if season_number == 1
 
     puts "Renaming files for #{path + season_str + '/'}"
@@ -84,6 +88,7 @@ def add_episode_names(path, episodes_by_season)
       puts "Renaming aborted.".light_red
     end
   end
+  puts "No Seasons found at #{path}" || exit unless has_seasons
 end
 
 def add_episode_names_to_season(path, episodes, rename)
@@ -111,9 +116,9 @@ def add_episode_names_to_season(path, episodes, rename)
       filename.insert filename.index(/x\d\d/), 'E'
       filename = filename.gsub /x(\d\d)/, '\1'
     end
-    if filename.match /\d\d .\d\d/
-      filename = filename.gsub /(\d\d) (.\d\d)/, '\1\2'
-    end
+    # if filename.match /\d\d .\d\d/
+    #   filename = filename.gsub /(\d\d) (.\d\d)/, '\1\2'
+    # end
     if filename.match /\(\d\d\d\d\) /
       filename = filename.gsub /\(\d\d\d\d\) /, ''
     end
@@ -121,16 +126,25 @@ def add_episode_names_to_season(path, episodes, rename)
     filename = filename.gsub(/s(\d\d)/, 'S\1')
     filename = filename.gsub(/e(\d\d)/, 'E\1')
 
-    # filename = filename.gsub(/E(\d\d)/) do |match|
-    #   episode_n = match[/\d+/].to_i
-    #   [2, 14].keep_if do |num|
-    #     episode_n >= num
-    #   end.each do
-    #     episode_n += 1
-    #   end
-    #   "E#{episode_n.to_s.rjust(2, '0')}"
-    # end
+    filename = filename.gsub(/E(\d\d)/) do |match|
+      episode_n = match[/\d+/].to_i
+      # [7,7,7].keep_if do |num|
+      #   episode_n >= num
+      # end.each do
+      #   episode_n += 1
+      # end
 
+      # [20].keep_if do |num|
+      #   episode_n >= num
+      # end.each do
+      #   episode_n -= 1
+      # end
+
+      "E#{episode_n.to_s.rjust(2, '0')}"
+    end
+
+    filename = filename.gsub('Marvels', "Marvel's")
+    filename = filename.gsub('S H I E L D', 'S.H.I.E.L.D.')
     # filename = "The Office " + filename[filename.index(/S\d\dE\d\d/)..-1]
 
     episode_number = filename[/E\d+/][/\d+/].to_i
