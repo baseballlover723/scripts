@@ -5,7 +5,7 @@ require 'pry'
 require 'set'
 require 'mime/types'
 require 'differ'
-require 'concurrent'
+require 'parallel'
 
 Differ.format = :color
 PATH = "/mnt/e/movies/"
@@ -13,7 +13,7 @@ PATH = "/mnt/e/movies/"
 PATH << '/' unless PATH.end_with? '/'
 OPTS = {encoding: 'UTF-8'}
 NAMES = {} # {old: new}
-NUMBER_OF_THREADS = 16
+NUMBER_OF_THREADS = 8
 
 # TODO
 # check if there is a year
@@ -29,31 +29,28 @@ NUMBER_OF_THREADS = 16
 def main
   start = Time.now
   files = []
+  count = 0
   Dir.glob(PATH + '**/*').each do |f|
     next if File.directory? f
     parent_dir_path = File.dirname f
     next if parent_dir_path.include?('Featurettes')
     next unless is_video?(File.extname(f))
+    count += 1
     files << f
+    # break if count == 5
   end
 
   completed = 0
-  started = 0
-
-  pool = Concurrent::FixedThreadPool.new(NUMBER_OF_THREADS)
   number_pad = files.size.to_s.size
-  files.each do |f|
-    started += 1
-    pool.post do
-      analyze_file f
-      completed += 1
-      print "\r                               \r" +
-              "#{completed.to_s.rjust(number_pad, '0')} / #{files.size} done"
-    end
-    # break if started == 1
+  new_file_names = Parallel.map(files, in_processes: NUMBER_OF_THREADS, finish: -> (_item, _i, _result) do
+    completed += 1
+    print "\r                               \r" +
+            "#{completed.to_s.rjust(number_pad, '0')} / #{files.size} done"
+  end) do |f|
+    analyze_file f
   end
-  pool.shutdown
-  pool.wait_for_termination
+
+  NAMES.replace Hash[files.zip(new_file_names)]
 
   trim_names
   print_names
@@ -90,7 +87,7 @@ def analyze_file(f)
     parent_dir += " {#{video_format}}"
   end
 
-  NAMES[f] = grandparent_dir + '/' + parent_dir + '/' + filename
+  grandparent_dir + '/' + parent_dir + '/' + filename
 end
 
 def rename
