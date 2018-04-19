@@ -3,7 +3,7 @@ require 'colorize'
 require 'active_support'
 require 'active_support/number_helper'
 
-PATH = '/mnt/g/anime'
+PATH = '/mnt/e/movies'
 OPTS = {encoding: 'UTF-8'}
 SHOWS = {}
 RESULTS = []
@@ -27,15 +27,15 @@ end
 def main
   shows = Dir.entries PATH, OPTS
   shows.each do |show|
-    next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini'
+    next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini' || show == 'format.txt'
     calculate_size show
   end
-  PATH << '/zWatched'
-  watched_shows = Dir.entries PATH, OPTS
-  watched_shows.each do |show|
-    next if show == '.' || show == '..' || show == 'desktop.ini'
-    calculate_size show
-  end
+  # PATH << '/zWatched'
+  # watched_shows = Dir.entries PATH, OPTS
+  # watched_shows.each do |show|
+  #   next if show == '.' || show == '..' || show == 'desktop.ini'
+  #   calculate_size show
+  # end
 
 end
 
@@ -76,11 +76,14 @@ File.open('./anime.txt', 'w') do |file|
   end
 end
 RESULTS.sort_by!(&:bytes).reverse!
+# RESULTS.sort_by!(&:name)
 print "\r".ljust(120)
 print "\r"
 total = 0
 RESULTS.each do |result|
-  break if result.bytes < 1024 * 1024 * 1024 * 20
+  # next if result.bytes < 1024 * 1024 * 1024 * 40
+  next if result.name.include? 'x265'
+  # next if result.name.include? '1080p'
   puts result
   total += result.bytes
 end

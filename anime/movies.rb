@@ -1,13 +1,15 @@
 REMOTE = !ARGV.empty?
 LOCAL_PATH = '/mnt/c/Users/Philip Ross/Downloads'
-EXTERNAL_PATHES = {movies: '/mnt/e/movies', tv: '/mnt/e/tv'}
+EXTERNAL_PATHES = {movies: '/mnt/e/movies', tv: '/mnt/h/tv'}
 REMOTE_PATHES = {movies: '../../raided/movies', tv: '../../raided/tv'}
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {movies: {}, tv: {}, local: {}}
 MOVIE_EXTENSIONS = ['.mkv', '.mp4', '.m4v', '.srt', '.avi']
 BLACKLIST = ['anime', 'Naruto', 'Naruto - Copy']
-FILTER = /Season \d\d - Episode(s?) \d\d\d-\d\d\d/
-
+# FILTER = /Season \d\d - Episode(s?) \d\d\d-\d\d\d/
+FILTER = /Naruto/
+# Need to transfer 1.9074 TB: EST: 16 days, 22 hours, 20 minutes and 59 seconds (1400 KB/s)
+# Need to transfer 1.9074 TB: EST: 16 days, 22 hours, 20 minutes and 59 seconds (1400 KB/s)
 if ARGV.empty?
   require 'dotenv/load'
   require 'net/ssh'
@@ -20,7 +22,7 @@ if ARGV.empty?
   $included = Set.new
   $included << 'remote'
   $included << 'external' if File.directory? EXTERNAL_PATHES.values.first
-  $included << 'local' if File.directory? LOCAL_PATH
+  # $included << 'local' if File.directory? LOCAL_PATH
   puts 'skipping overmind' unless $included.include? 'remote'
   puts 'skipping external' unless $included.include? 'external'
 
@@ -186,8 +188,9 @@ class Episode
       end
     end
 
-    # name = File.basename(@name, '.*').cyan
+    # name = File.basename(@name, '.*'). cyan
     name = @name.cyan
+    name = name[/.*S\d\dE\d\d/] if name[/S\d\dE\d\d/]
     str = "#{name}:"
     str << " #{sizes[:local_size]}" if sizes.has_key? :local_size
     str << " (#{sizes[:remote_size]})" if sizes.has_key? :remote_size
@@ -204,7 +207,7 @@ def main
           sftp.upload!(__FILE__, "remote.rb")
         end
         puts 'running on remote'
-        serialized_results = ssh.exec! "ruby remote.rb remote"
+        serialized_results = ssh.exec! "source load_rbenv && ruby remote.rb remote"
         begin
           RESULTS.replace Marshal::load(serialized_results)
         rescue TypeError => e
@@ -428,9 +431,10 @@ def print_results
         end
       end
     end
-    transfer = ActiveSupport::NumberHelper.number_to_human_size(external - remote, {precision: 5, strip_insignificant_zeros: false})
+    transfer_amount = external
+    transfer = ActiveSupport::NumberHelper.number_to_human_size(transfer_amount, {precision: 5, strip_insignificant_zeros: false})
     kilobytes_per_sec = 1400
-    est = (external - remote) / (1024 * kilobytes_per_sec)
+    est = (transfer_amount) / (1024 * kilobytes_per_sec)
     puts "Need to transfer #{transfer.light_cyan}: EST: #{to_human_duration(est).light_cyan} (#{kilobytes_per_sec} KB/s)"
   end
 end

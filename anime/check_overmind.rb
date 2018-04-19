@@ -9,6 +9,8 @@ TEMP_PATH = '/mnt/e/anime'
 REMOTE_PATH = '../../raided/anime'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
+HIDE_LOCAL_ONLY = true
+# TODO hide_local_only make extensible so it dosen't only depend on local and remote
 
 if ARGV.empty?
   require 'dotenv/load'
@@ -187,13 +189,16 @@ class Episode
         sizes[size_type] = size.paint
       end
     end
+
     sizes[:external_size] = sizes[:external_size].paint if in_both_external?
     sizes[:long_external_size] = sizes[:long_external_size].paint if in_both_external?
 
     name = File.basename(@name, '.*').cyan
+    name = @name.cyan
+    return "#{name}" if defined?(HIDE_LOCAL_ONLY) && HIDE_LOCAL_ONLY && local_size != 0 && remote_size == 0
     str = "#{name}:"
     str << " #{sizes[:local_size]}" if sizes.has_key? :local_size
-    str << " (#{sizes[:remote_size]})" if sizes.has_key? :remote_size
+    str << " (#{sizes[:remote_size]})" if sizes.has_key?(:remote_size)
     both_zero = external_size == long_external_size && external_size == 0
     # str << " [both]" if both_zero && (sizes.has_key?(:external_size) || sizes.has_key?(:long_external_size))
     str << " [#{sizes[:external_size]}]" if both_zero && (sizes.has_key?(:external_size) || sizes.has_key?(:long_external_size))
@@ -213,7 +218,7 @@ def main
           sftp.upload!(__FILE__, "remote.rb")
         end
         puts 'running on remote'
-        serialized_results = ssh.exec! "ruby remote.rb remote"
+        serialized_results = ssh.exec! "source load_rbenv && ruby remote.rb remote"
         begin
           RESULTS.replace Marshal::load(serialized_results)
         rescue TypeError => e
@@ -285,12 +290,17 @@ end
 
 def analyze_episode(season, episode_name, path, type)
   return if File.directory? path
-  episode_name.chomp!('.filepart')
-  episode_name.chomp!('.crdownload')
-  episode_name.chomp! '.mp4'
-  episode_name.chomp! '.mkv'
+  file_size = File.size(path)
+  if (file_size == 0) # so
+    file_size = 1
+  else
+    episode_name.chomp!('.filepart')
+    episode_name.chomp!('.crdownload')
+    episode_name.chomp! '.mp4'
+    episode_name.chomp! '.mkv'
+  end
   episode = find_episode season, episode_name
-  episode.send(type + '_size=', File.size(path))
+  episode.send(type + '_size=', file_size)
 end
 
 def nested_show?(show)
@@ -382,7 +392,7 @@ def print_results
   print " unchanged".uncolor
   print "\n"
 
-  shows = RESULTS.values.sort_by(&:name)
+  shows = RESULTS.values.sort_by(&:name).reverse
   shows.each do |show|
     puts show.name
     show.seasons.each_value do |season|
@@ -402,6 +412,42 @@ def print_results
       puts str.indent indent_size
     end
   end
+
+  if $included.include?('remote') && $included.include?('external')
+    remote = 0
+    external = 0
+    local = 0
+    RESULTS.each_value do |show|
+      show.seasons.each_value do |season|
+        season.episodes.each_value do |episode|
+          # puts episode.inspect
+          next if defined?(HIDE_LOCAL_ONLY) && HIDE_LOCAL_ONLY && episode.remote_size == 0 && episode.local_size != 0
+          local += episode.local_size
+          remote += episode.remote_size
+          external += episode.external_size
+        end
+      end
+    end
+    transfer_amount = local
+    transfer = ActiveSupport::NumberHelper.number_to_human_size(transfer_amount, {precision: 5, strip_insignificant_zeros: false})
+    # kilobytes_per_sec = 1400
+    kilobytes_per_sec = 1200
+    est = (transfer_amount) / (1024 * kilobytes_per_sec)
+    puts "Need to transfer #{transfer.light_cyan}: EST: #{to_human_duration(est).light_cyan} (#{kilobytes_per_sec} KB/s)"
+  end
+end
+
+def to_human_duration(time)
+  mm, ss = time.divmod(60)
+  hh, mm = mm.divmod(60)
+  dd, hh = hh.divmod(24)
+  str = ""
+  str << "#{dd} days, " if dd > 0
+  str << "#{hh} hours, " if hh > 0
+  str << "#{mm} minutes, " if mm > 0
+  str << "#{ss} seconds, " if ss > 0
+  str = str[0..-3]
+  str.reverse.sub(" ,", " and ".reverse).reverse
 end
 
 def print_dups(dups)

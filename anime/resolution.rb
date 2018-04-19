@@ -3,7 +3,8 @@ require 'concurrent'
 require 'colorize'
 require 'active_support/core_ext/string/indent'
 
-PATH = '/mnt/d/anime'
+# PATH = '/mnt/d/anime'
+PATH = '/mnt/e/tv'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 # not light for work around with ansi colors in the log file
@@ -85,15 +86,15 @@ def main
 
   count = 0
   pool = Concurrent::FixedThreadPool.new(8)
-  watched_shows = Dir.entries PATH + '/zWatched', OPTS
-  watched_shows.each do |show|
-    next if show == '.' || show == '..' || show == 'desktop.ini'
-    pool.post do
-      analyze_show show, PATH + '/zWatched'
-    end
-    count += 1
-    # break if count > 4
-  end
+  # watched_shows = Dir.entries PATH + '/zWatched', OPTS
+  # watched_shows.each do |show|
+  #   next if show == '.' || show == '..' || show == 'desktop.ini'
+  #   pool.post do
+  #     analyze_show show, PATH + '/zWatched'
+  #   end
+  #   count += 1
+  #   # break if count > 4
+  # end
   shows.each do |show|
     next if show == '.' || show == '..' || show == 'zWatched'
     # count += 1 and next if count < 4

@@ -3,14 +3,13 @@ require 'httparty'
 require 'nokogiri'
 require 'highline/import'
 require 'pry'
-require 'resolv-replace'
-URL = "https://en.wikipedia.org/wiki/List_of_The_Mentalist_episodes"
-# URL = "https://en.wikipedia.org/wiki/List_of_Under_the_Dome_episodes"
+
+URL = "https://en.wikipedia.org/wiki/List_of_Futurama_episodes"
 # URL = "https://en.wikipedia.org/wiki/List_of_Smallville_episodes"
-PATH = "/mnt/c/Users/Philip Ross/Downloads/m/"
-# PATH = "/mnt/c/Users/Philip Ross/Downloads/The Wire [1080p] {x265}/"
-# PATH = "/mnt/e/tv/The Mentalist [720p] {x265}/"
-# PATH = "/raided/tv/The Mentalist [720p] {x265}/"
+# PATH = "/mnt/c/Users/Philip Ross/Downloads/r/"
+PATH = "/mnt/c/Users/Philip Ross/Downloads/Futurama [1080p] {x265}/"
+# PATH = "/mnt/e/tv/The Office [1080p] {x265}/"
+# PATH = "/raided/tv/The Mighty Boosh (2003) [720p] {x265}/"
 PATH << '/' unless PATH.end_with? '/'
 OPTS = {encoding: 'UTF-8'}
 REMOVE_PREFIX = "[snahp.it]"
@@ -41,28 +40,39 @@ def get_episode_names
   parsed = Nokogiri::HTML html
 
   episodes_by_season = {}
-  # tables = parsed.css('.wikiepisodetable')[0..8]
-  tables = parsed.css('.wikitable')[0..7]
+
+  (0...9).each do |n|
+    episodes_by_season[n] = {}
+  end
+  tables = parsed.css('.wikiepisodetable')[5..8]
+  # tables = parsed.css('.wikitable')[0..14]
   tables.each do |table|
-    number_of_previous = 5
+    number_of_previous = 2
     season_header = table
     number_of_previous.times do
       season_header = season_header.previous_sibling.previous_sibling
-      break if season_header.text.match? /Season \d+/
     end
-    season_number = season_header.text[/\d+/].to_i
-    season_number += 2 if episodes_by_season.size >= 2 && URL.include?('DreamWorks_Dragons')
+    # puts 'text: ' + season_header.text
+    # season_number = season_header.text[/\d+/].to_i
     # season_number = 1
     season = {}
-    episodes_by_season[season_number] = season
+    # episodes_by_season[season_number] = season
 
     table.css('.summary').each do |summary|
       # episode_title = summary.text.gsub('"', '')
       episode_title = summary.text.scan(/"(.*)"/)&.first&.first || summary.text
-      episode_number = summary.previous_sibling.previous_sibling.text[/\d+/].to_i
+      # episode_number = summary.previous_sibling.previous_sibling.text[/\d+/].to_i
+      tv_order = summary.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.
+        # next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.text
+        next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.text
+      puts tv_order
+      season_number = tv_order[/\d+/].to_i
+      episode_number = tv_order[/E\d+/][/\d+/].to_i
+      episode_number += 13 if tv_order.include? 'B'
       # episode_number = summary.previous_sibling.previous_sibling.previous_sibling.previous_sibling.text[/\d+/].to_i
 
-      season[episode_number] = episode_title
+      # season[episode_number] = episode_title
+      episodes_by_season[season_number][episode_number] = episode_title
 
     end
   end
@@ -83,6 +93,7 @@ def add_episode_names(path, episodes_by_season)
     next unless episodes_by_season[season_number]
     has_seasons = true
     # next if season_number == 1
+    next if season_number < 6
 
     puts "Renaming files for #{path + season_str + '/'}"
     default = add_episode_names_to_season(path + season_str + '/', episodes_by_season[season_number].dup, false)
@@ -197,7 +208,7 @@ def gsub_windows(str)
 end
 
 def escape_glob(s)
-  s.gsub(/[\\\{\}\[\]\*\?]/) {|x| "\\"+x}
+  s.gsub(/[\\\{\}\[\]\*\?]/) {|x| "\\" + x}
 end
 
 def yesno(default = true, prompt = 'Continue?')

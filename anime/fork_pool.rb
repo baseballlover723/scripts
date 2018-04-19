@@ -1,4 +1,5 @@
 require "socket"
+require "parallel"
 
 # currently can handle sending and queuing up multiple data
 class ForkPool
@@ -56,8 +57,16 @@ def do_work(filepath)
 end
 
 
-queue = ['test', 'path']
-pool = ForkPool.new(8, queue, method(:do_work)) do |result|
-  puts result
-end
+# queue = ['test', 'path']
+# pool = ForkPool.new(8, queue, method(:do_work)) do |result|
+#   puts result
+# end
 
+queue = [1,2,3,4,5,6,7,8,9]
+res = Parallel.map(queue, in_processes: 2) do |arg|
+  sleep 10 - arg
+  print arg.to_s + "\n"
+  arg * 2
+end.inspect
+
+puts res.inspect

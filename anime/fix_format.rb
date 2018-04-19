@@ -1,5 +1,4 @@
 require 'colorize'
-require 'mediainfo'
 require 'highline/import'
 require 'pry'
 require 'set'
@@ -8,8 +7,8 @@ require 'differ'
 require 'parallel'
 
 Differ.format = :color
-PATH = "/mnt/e/movies/"
-# PATH = "/raided/tv/The Mighty Boosh (2003) [720p] {x265}/"
+# PATH = "/mnt/e/movies/"
+PATH = "/raided/movies/"
 PATH << '/' unless PATH.end_with? '/'
 OPTS = {encoding: 'UTF-8'}
 NAMES = {} # {old: new}

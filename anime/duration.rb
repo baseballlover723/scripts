@@ -5,11 +5,28 @@ require 'active_support/number_helper'
 require 'active_support/core_ext/string/indent'
 
 PATH = '/mnt/d/anime'
+MOVIE_PATH = '/mnt/e/movies'
+TV_PATH = '/mnt/e/tv'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
-TIMES = {seconds: 1000.0, minutes: 60.0, hours: 60.0, days: 24.0, monthes: (265.25/12), years: 12.0}
+TIMES = {seconds: 1000.0, minutes: 60.0, hours: 60.0, days: 24.0, months: (365.25/12), years: 12.0}
 #TODO investigate why a certain scientific railgun shows up on a certain magical index iwth 47 mins?
 # commit and push
+
+def read_file
+  path = "/tmp/anime_duration"
+  return unless File.exist? path
+  file = File.new(path)
+  r = Marshal::load(file)
+  puts r
+  kljh
+end
+
+# read_file
+
+def save_results
+  Marshal::dump(RESULTS)
+end
 
 def human_duration(ms, threshhold)
   prev_string = "#{ms} milliseconds"
@@ -48,8 +65,6 @@ class Anime
       end
     end
   end
-
-  'kkk'
 end
 
 class Season
@@ -67,7 +82,7 @@ class Season
   end
 
   def duration
-    @episodes.values.map(&:duration).inject(0, :+)
+    @episodes.values.map(&:duration).map(&:to_i).inject(0, :+)
   end
 end
 
@@ -87,10 +102,14 @@ end
 
 def main
   pool = Concurrent::FixedThreadPool.new(8)
+  iterate MOVIE_PATH, pool
+  iterate TV_PATH, pool
   iterate PATH + '/zWatched', pool
   iterate PATH, pool
+
   pool.shutdown
   pool.wait_for_termination
+  puts 'Done: Calculating'
 end
 
 def iterate(path, pool)
@@ -100,7 +119,7 @@ def iterate(path, pool)
     next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini'
     # next unless show.start_with?('C')
     count += 1
-    # break if count > 5
+    # break if count > 2
     pool.post do
       analyze_show show, path + '/' + show
     end
@@ -153,9 +172,10 @@ def analyze_season(season, path)
 end
 
 def analyze_episode(season, episode_name, path)
+  return if path.include?('/Featurettes') || path.include?('/Extra')
   episode = find_episode season, episode_name
   raw_episode = Mediainfo.new path
-  episode.duration = raw_episode.duration
+  episode.duration = raw_episode.duration if raw_episode.duration
 end
 
 def nested_show?(show)
@@ -178,7 +198,7 @@ def print_results
   end
   puts 'total'.green.bold + ': ' + human_duration(RESULTS.values.map(&:duration).inject(0, :+), 1)
 
-  log = File.new('./duration_log.log', 'w')
+  log = File.new('./durations.log', 'w')
   log.puts 'total'.green.bold + ': ' + human_duration(RESULTS.values.map(&:duration).inject(0, :+), 1)
   RESULTS.values.sort_by(&:duration).reverse.each do |anime|
     anime.print(log)
@@ -188,6 +208,7 @@ end
 
 start = Time.now
 main
+save_results
 finish = Time.now
 print_results
 puts "took #{human_duration (finish - start) * 1000, 1}"
