@@ -3,6 +3,8 @@ require 'colorize'
 require 'active_support'
 require 'active_support/number_helper'
 require 'active_support/core_ext/string/indent'
+require 'shellwords'
+require 'mime/types'
 
 PATH = '/mnt/d/anime'
 MOVIE_PATH = '/mnt/e/movies'
@@ -32,7 +34,7 @@ def human_duration(ms, threshhold)
   prev_string = "#{ms} milliseconds"
   prev_value = ms
   TIMES.each do |unit, multi|
-    return prev_string.cyan.bold if prev_value / multi < threshhold
+    return prev_string.cyan.bold if prev_value.abs / multi < threshhold
     prev_value /= multi
     prev_string = "#{prev_value.round 2} #{unit}"
   end
@@ -102,8 +104,8 @@ end
 
 def main
   pool = Concurrent::FixedThreadPool.new(8)
-  iterate MOVIE_PATH, pool
-  iterate TV_PATH, pool
+  # iterate MOVIE_PATH, pool
+  # iterate TV_PATH, pool
   iterate PATH + '/zWatched', pool
   iterate PATH, pool
 
@@ -119,7 +121,7 @@ def iterate(path, pool)
     next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini'
     # next unless show.start_with?('C')
     count += 1
-    # break if count > 2
+    # break if count > 5
     pool.post do
       analyze_show show, path + '/' + show
     end
@@ -173,9 +175,12 @@ end
 
 def analyze_episode(season, episode_name, path)
   return if path.include?('/Featurettes') || path.include?('/Extra')
+  return unless is_video?(File.extname(path))
+
   episode = find_episode season, episode_name
-  raw_episode = Mediainfo.new path
-  episode.duration = raw_episode.duration if raw_episode.duration
+  # raw_episode = Mediainfo.new path
+  # episode.duration = raw_episode.duration if raw_episode.duration
+  episode.duration = `mediainfo --ReadByHuman=0 --ParseSpeed=0 --Inform="General;%Duration%" #{Shellwords.escape(path)}`.to_i
 end
 
 def nested_show?(show)
@@ -189,6 +194,10 @@ end
 
 def find_episode(season, name)
   season.episodes[name] || Episode.new(season, name)
+end
+
+def is_video?(ext)
+  MIME::Types.type_for(ext).any? {|mt| mt.media_type == 'video'}
 end
 
 def print_results
