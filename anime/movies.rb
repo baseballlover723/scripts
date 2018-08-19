@@ -1,7 +1,7 @@
 REMOTE = !ARGV.empty?
 LOCAL_PATH = '/mnt/c/Users/Philip Ross/Downloads'
 EXTERNAL_PATHES = {movies: '/mnt/e/movies', tv: '/mnt/h/tv'}
-REMOTE_PATHES = {movies: '../../raided/movies', tv: '../../raided/tv'}
+REMOTE_PATHES = {movies: '../../entertainment/movies', tv: '../../entertainment/tv'}
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {movies: {}, tv: {}, local: {}}
 MOVIE_EXTENSIONS = ['.mkv', '.mp4', '.m4v', '.srt', '.avi']
@@ -290,11 +290,15 @@ def analyze_season(season, path, location)
 end
 
 def analyze_episode(season, episode_name, path, location)
+  file_size = File.size(path)
+  if (file_size == 0) # so
+    file_size = 1
+  end
   episode_name.chomp!('.filepart')
   episode_name.chomp!('.crdownload')
-  return unless episode_name.end_with? *MOVIE_EXTENSIONS
+  # return unless episode_name.end_with? *MOVIE_EXTENSIONS
   episode = find_episode season, episode_name
-  episode.send(location + '_size=', File.size(path))
+  episode.send(location + '_size=', file_size)
 end
 
 def show_group?(name)
@@ -433,7 +437,7 @@ def print_results
     end
     transfer_amount = external
     transfer = ActiveSupport::NumberHelper.number_to_human_size(transfer_amount, {precision: 5, strip_insignificant_zeros: false})
-    kilobytes_per_sec = 1400
+    kilobytes_per_sec = 1200
     est = (transfer_amount) / (1024 * kilobytes_per_sec)
     puts "Need to transfer #{transfer.light_cyan}: EST: #{to_human_duration(est).light_cyan} (#{kilobytes_per_sec} KB/s)"
   end
