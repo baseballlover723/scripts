@@ -290,15 +290,33 @@ def analyze_season(season, path, location)
 end
 
 def analyze_episode(season, episode_name, path, location)
-  file_size = File.size(path)
-  if (file_size == 0) # so
-    file_size = 1
+  if File.directory?(path)
+    file_size = directory_size(path)
+  else
+    file_size = File.size(path)
+    if (file_size == 0) # so
+      file_size = 1
+    end
   end
   episode_name.chomp!('.filepart')
   episode_name.chomp!('.crdownload')
   # return unless episode_name.end_with? *MOVIE_EXTENSIONS
   episode = find_episode season, episode_name
   episode.send(location + '_size=', file_size)
+end
+
+def directory_size(path)
+  raise RuntimeError, "#{path} is not a directory" unless File.directory?(path)
+
+  total_size = 0
+  entries = Dir.entries path, OPTS
+  entries.each do |f|
+    next if f == '.' || f == '..' || f == 'zWatched' || f == 'desktop.ini'
+    f = "#{path}/#{f}"
+    total_size += File.size(f) if File.file?(f) && File.size?(f)
+    total_size += directory_size f if File.directory? f
+  end
+  total_size
 end
 
 def show_group?(name)
@@ -485,7 +503,7 @@ end
 
 $indent_size = 0
 
-def indent(numb=2)
+def indent(numb = 2)
   $indent_size += numb
   yield
   $indent_size -= numb
