@@ -189,8 +189,9 @@ class Episode
     end
 
     # name = File.basename(@name, '.*'). cyan
-    name = @name.cyan
+    name = @name
     name = name[/.*S\d\dE\d\d/] if name[/S\d\dE\d\d/]
+    name = name.cyan
     str = "#{name}:"
     str << " #{sizes[:local_size]}" if sizes.has_key? :local_size
     str << " (#{sizes[:remote_size]})" if sizes.has_key? :remote_size
