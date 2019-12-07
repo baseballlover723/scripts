@@ -2,20 +2,26 @@ require 'set'
 require 'colorize'
 
 PATHS = [
-  '/mnt/c/Users/Philip Ross/Downloads/v',
-  # '/mnt/c/Users/Philip Ross/Downloads/from the new world',
-  # '/mnt/c/Users/Philip Ross/Downloads/Big Windup!/Season 1',
-  # '/mnt/c/Users/Philip Ross/Downloads/Big Windup!/Season 2',
-
+  # '/mnt/c/Users/Philip Ross/Downloads/b',
+  "/mnt/c/Users/Philip Ross/Downloads/Ghost Hound",
+  # "/mnt/c/Users/Philip Ross/Downloads/Season 1",
+  # "/mnt/c/Users/Philip Ross/Downloads/Season 2",
+  # '/mnt/c/Users/Philip Ross/Downloads/Black Lagoon/Season 2',
+  # '/mnt/c/Users/Philip Ross/Downloads/Black Lagoon/Season 3',
 # '/mnt/c/Users/Philip Ross/Downloads/Accel World',
+#   "/mnt/f/anime/Attack On Titan (In Progress)/Season 3 (In Progress)",
+#   "/entertainment/anime/Attack On Titan (In Progress)/Season 3 (In Progress)",
 ]
 PATHS.each {|p| p << '/' unless p.end_with? '/'}
 OPTS = {encoding: 'UTF-8'}
 RENAME = true
+# RENAME = false
 RESULTS = []
 ANIME = false
 IGNORE_PREFIX = '[bonkai77]'
-# NUMBER_INCREMENT = -328
+IGNORE_FILE_ENDING = '.p'
+# NUMBER_INCREMENT = 37
+SECOND_NUMBER_INDEX = 1
 
 def expand_paths
   expanded = Set.new
@@ -89,7 +95,7 @@ def rename_season(path, rename, first_number)
 end
 
 def rename_episode(folder_path, name, rename, first_number)
-  return unless name.include? '.'
+  return if !name.include?('.') || name.end_with?('.enc') || name.end_with?('x.264')
   episode_number = extract_number name, rename, first_number
   puts "Not renaming '#{name.light_yellow}'" or return unless episode_number
   if rename
@@ -100,9 +106,12 @@ def rename_episode(folder_path, name, rename, first_number)
 end
 
 def extract_number(str, rename, first_number)
-  str = str[IGNORE_PREFIX.length..-1] if str.start_with? IGNORE_PREFIX
+  str = str[IGNORE_PREFIX.length..-1] if str.start_with?(IGNORE_PREFIX)
+  return if str.end_with?(IGNORE_FILE_ENDING)
+  str = str.gsub /\(\d\d\d\d\)/, ''
+
   puts str if !rename && first_number
-  numb = first_number ? str[/\d+/] : str.scan(/\d+/)[1]
+  numb = first_number ? str[/\d+/] : str.scan(/\d+/)[SECOND_NUMBER_INDEX]
   # numb = str[/E\d+/][/\d+/].to_i
   # numb = str[/E\d+-E\d+/]&.gsub('E', '') || numb
   return unless numb
@@ -110,6 +119,7 @@ def extract_number(str, rename, first_number)
   numb += NUMBER_INCREMENT if defined? NUMBER_INCREMENT
 
   numb if numb < 1900 # probably a movie
+  # puts numb
   numb
 end
 

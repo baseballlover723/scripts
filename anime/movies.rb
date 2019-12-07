@@ -1,7 +1,9 @@
 REMOTE = !ARGV.empty?
 LOCAL_PATH = '/mnt/c/Users/Philip Ross/Downloads'
 EXTERNAL_PATHES = {movies: '/mnt/e/movies', tv: '/mnt/h/tv'}
+# EXTERNAL_PATHES = {movies: '/mnt/e/movies'}
 REMOTE_PATHES = {movies: '../../entertainment/movies', tv: '../../entertainment/tv'}
+# REMOTE_PATHES = {movies: '../../entertainment/movies'}
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {movies: {}, tv: {}, local: {}}
 MOVIE_EXTENSIONS = ['.mkv', '.mp4', '.m4v', '.srt', '.avi']
@@ -201,6 +203,7 @@ class Episode
 end
 
 def main
+  puts Time.now
   if $included.include? 'remote'
     begin
       Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
@@ -269,7 +272,7 @@ def analyze_show(show_group, show_name, path, location, type)
   show = find_show(show_group, show_name)
   root_season = find_season show, 'root'
   entries = Dir.entries path, OPTS
-  entries.each do |entry|
+  entries.sort.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
     if File.directory?("#{path}/#{entry}")
       analyze_season find_season(show, entry), path + '/' + entry, location
@@ -284,7 +287,7 @@ end
 
 def analyze_season(season, path, location)
   entries = Dir.entries path, OPTS
-  entries.each do |entry|
+  entries.sort.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
     analyze_episode season, entry, path + '/' + entry, location
   end

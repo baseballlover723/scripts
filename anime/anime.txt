@@ -1,117 +1,492 @@
-2012 (2009) [1080p] {x265}
-21 Jump Street
-300
-42 (2013) [1080p] {x264}
-Abraham Lincoln; Vampire Hunter (2012) [1080p] {x265}
-Alien
-American Pie
-American Sniper (2014) [1080p] {x265}
-Antarctica On the Edge (2014) [2160p] {x265}
-Apollo 13 (1995) [1080p] {x265}
-Argo (Extended) (2012) [1080p] {x265}
-Avatar (Extended CE) (2009) [1080p] {x265}
-Batman
-Battle Royale (DC) (2000) [1080p] {x265}
-Black Hawk Down (Extended) (2001) [1080p] {x265}
-Blade Runner
-Bourne
-Charlie and the Chocolate Factory (2005) [1080p] {x265}
-Chronicle (Extended) (2012) [1080p] {x265}
-City of Ember (2008) [1080p] {x265}
-Cloudy with a Chance of Meatballs
-Darkest Hour (2017) [1080p] {x265} 10bit Tigole)
-DC
-Despicable Me
-Die Hard
-Disney
-District 9 (2009) [1080p] {x265}
-Divergent
-DreamWorks
-Dunkirk (2017) [1080p] {x265}
-E.T. the Extra-Terrestrial (1982) [1080p] {x265}
-Edge of Tomorrow (2014) [1080p] {x265}
-Elysium (2013) [1080p] {x265}
-Ender's Game (2013) [2160p] {x265}
-Fantastic Beasts and Where to Find Them (2016) [1080p] {x265}
-Fast & Furious
-Full Metal Jacket (SE) (1987) [1080p] {x265}
-Geostorm (2017) [1080p] {x264}
-Gravity (2013) [1080p] {x265}
-Hancock (Unrated) (2008) [1080p] {x265}
-Harry Potter
-Hidden Figures (2016) [1080p] {x264}
-Horton Hears a Who! (2008) [1080p] {x265}
-Hotel Transylvania
-Hugo (2011) [1080p] {x265}
-Inception (2010) [1080p] {x265}
-Indiana Jones
-Interstellar (2014) [1080p] {x265}
-It (2017) [1080p] {x265}
-Jarhead (2005) [1080p] {x264} (Shit Bitrate)
-Jumanji
-Jurassic Park
-Kill Bill
-King Kong
-La La Land (2016) [2160p] {x265}
-Les Miserables (2012) [1080p] {x265}
-Life of Pi (2012) [1080p] {x265}
-Limitless (Unrated) (2011) [1080p] {x264}
-Lincoln (2012) [1080p] {x265}
-Lord of the Rings
-Mad Max; Fury Road (2015) [1080p] {x265}
-Marvel
-Mean Girls (2004) [1080p] {x265}
-Men in Black
-Moneyball (2011) [1080p] {x265}
-Monty Python and the Holy Grail (1975) [1080p] {x265}
-Oblivion (2013) [2160p] {x265}
-Office Space (1999) [1080p] {x265}
-Pacific Rim (2013) [1080p] {x265}
-Paddington
-Pete's Dragon (2016) [1080p] {x265}
-Pitch Perfect
-Pixar
-Power Rangers (2017) [2160p] {x265}
-R.I.P.D. (2013) [1080p] {x265}
-Rango (Extended) (2011) [1080p] {x265}
-Resident Evil
-Rio
-Robert Langdon Trilogy
-Salt (2010) [1080p] {x265}
-Saving Private Ryan (1998) [1080p] {x265}
-Scott Pilgrim vs. the World (2010) [1080p] {x265}
-Shutter Island (2010) [1080p] {x265}
-Sing (2016) [1080p] {x265}
-Sing Street (2016) [1080p] {x264}
-Slumdog Millionaire (2008) [1080p] {x265}
-Star Trek
-Star Wars
-Suicide Squad (Extended) (2016) [1080p] {x265}
-Taken (Extended) (2008) [1080p] {x265}
-The Book of Eli (2010) [1080p] {x264}
-The Cloverfield Paradox (2018) [1080p] {x265}
-The Day After Tomorrow (2004) [1080p] {x265}
-The Disaster Artist (2017) [1080p] {x265}
-The Great Gatsby (2013) [1080p] {x265}
-The Greatest Showman (2017) [1080p] {x264} (Hard Subbed Korean)
-The Hunger Games
-The Interview (2014) [1080p] {x265}
-The LEGO Movie
-The Lorax (2012) [1080p] {x265}
-The Martian (Extended) (2015) [1080p] {x265}
-The Maze Runner
-The Prestige (2006) [1080p] {x265}
-The Room (2003) [1080p] {x265}
-The Shape of Water (2017) [1080p] {x265}
-The Simpsons Movie (2007) [1080p] {x265}
-The Social Network (2010) [1080p] {x265}
-The Theory of Everything (2014) [1080p] {x265}
-This Is Spinal Tap (1984) [692p] {x264}
-Transformers
-Tron
-V for Vendetta (2005) [1080p] {x265}
-War Horse (2011) [1080p] {x265}
-Whiplash (2014) [1080p] {x265}
-World War Z (Unrated) (2013) [1080p] {x265}
-Zero Dark Thirty (2012) [1080p] {x265}
-Zombieland (2009) [1080p] {x265}
+5 Centimeters per Second
+91 Days
+A Certain Magical Index
+A Certain Scientific Accelerator (In Progress)
+A Certain Scientific Railgun
+A Letter to Momo
+A Lull in the Sea
+A Place Further Than The Universe
+A Sister's All You Need
+Absolute Duo
+ACCA 13-Territory Inspection Dept
+Aesthetica of a Rogue Hero
+Afro Samurai
+After the Rain
+Ah! My Goddess
+Ajin
+Alderamin on the Sky
+Amagami SS
+Amagi Brilliant Park
+Angel's Egg
+Angels of Death
+Angolmois; Genkou Kassenki
+Another
+Aria The Animation
+Arifureta; From Commonplace to World's Strongest (In Progress)
+Arpeggio of Blue Steel; Ars Nova
+As the Moon, So Beautiful
+Asobi Asobase; Workshop Of Fun
+Astra Lost in Space
+Attack on Titan; Junior High
+Ayakashi; Samurai Horror Tales
+Azumanga Daioh; The Animation
+B; The Beginning
+Baccano!
+Baka & Test - Summon the Beasts
+Banana Fish
+Barakamon
+Basilisk
+Beck; Mongolian Chop Squad
+Berserk
+Beyond the Boundary
+Big Windup!
+Black Bullet
+Black Butler
+Black Cat
+Black Lagoon
+Black★Rock Shooter
+Blame!; The Ancient Terminal City
+Blast of Tempest
+Bleach (Incomplete)
+Blood Blockade Battlefront
+Blood Lad
+Blood+
+Blue Exorcist
+Boogiepop Phantom
+Broken Blade
+Bungo Stray Dogs
+Bunny Drop
+Canaan
+Cardcaptor Sakura
+Carnival Phantasm
+Carole & Tuesday (In Progress)
+Casshern Sins
+Casted Away - Airan Island
+Castle in the Sky
+Castlevania
+Cells At Work
+Chaika -The Coffin Princess-
+Charlotte
+Chihayafuru
+Children Who Chase Lost Voices
+Chrome Shelled Regios
+Clannad
+Classroom of the Elite
+Claymore
+Code Breaker
+Code Geass Lelouch of the Rebellion
+Cowboy Bebop
+Cromartie High School
+Cross Game
+D.Gray-man
+Daily Lives of High School Boys
+Danganronpa; The Animation
+DanMachi (In Progress)
+DanMachi; Sword Oratoria
+Darker than Black
+DARLING in the FRANXX
+Date A Live
+Death Note
+Death Parade
+Demon Slayer (In Progress)
+Desert Punk
+Detroit Metal City; The Animated Series
+Devil May Cry
+Devilman; Crybaby
+Dimension W
+Dororo
+Dr. Stone (In Progress)
+Drifters
+Durarara!!
+Dusk Maiden Of Amnesia
+Eden of the East
+ef; A Tale of Memories
+El Cazador de la Bruja
+Elfen Lied
+Ergo Proxy
+Erin
+Eureka Seven
+Fate Apocrypha
+Fate Kaleid Liner Prisma☆Illya
+Fate Stay Night
+Fate Stay Night; Heaven's Feel
+Fate Stay Night; Unlimited Blade Works
+Fate Zero
+Fire Force (In Progress)
+FLCL
+Flying Witch
+Fractale
+Freezing
+From the New World
+From Up on Poppy Hill
+Fruits Basket (In Progress)
+Full Metal Panic!
+Full-Time Magister
+Fullmetal Alchemist; Brotherhood
+Ga-Rei-Zero
+Gabriel Dropout
+Gamers!
+Gangsta
+Gankutsuou; The Count of Monte Cristo
+Gantz
+Gargantia on the Verdurous Planet
+GATE
+Genocidal Organ
+Giovanni's Island
+Girls & Panzer
+Girls' Last Tour
+Glass Mask
+God Eater
+Golden Boy
+Golden Kamuy
+Golgo 13
+Grand Blue
+Grave of the Fireflies
+Great Teacher Onizuka
+Grimoire of Zero
+Gugure! Kokkuri-san
+Gungrave
+Gunslinger Girl
+Gurren Lagann
+Haganai; I don't have many friends
+Haibane Renmei
+Hakata Tonkotsu Ramens
+Hakkenden -Eight Dogs of the East-
+Hand Shakers
+Hanebado!
+Happy Sugar Life
+Haven't You Heard, I'm Sakamoto
+Heaven's Lost Property
+Hellsing
+Hellsing Ultimate
+High School of the Dead
+Hina Festival
+Honey and Clover
+Horizon in the Middle of Nowhere
+House of Five Leaves
+Howl's Moving Castle
+Hozuki's Coolheadedness
+Humanity Has Declined
+Hyouka
+I want to eat your pancreas
+If It's for My Daughter, I'd Even Defeat a Demon Lord (In Progress)
+In Another World With My Smartphone
+In the Night of the Storm
+In This Corner of the World
+Interviews With Monster Girls
+Inuyashiki; Last Hero
+Iroduku; The World in Colors
+Is This a Zombie
+Isekai Cheat Magician (In Progress)
+Isekai Quartet
+Jing; King of Bandits
+Joker Game
+Jormungand
+Jyu-Oh-Sei; Planet of the Beast King
+K (K-Project)
+K-ON!
+Kabaneri of the Iron Fortress
+Kaguya-sama; Love is War
+Kaiba
+Kaiji; Ultimate Survivor
+Kakegurui; Compulsive Gambler
+Kaleido Star
+Kamisama Kiss
+Karneval
+Katsugeki Touken Ranbu
+Kaze no Stigma
+Keijo!!!!!!!!
+Kekkaishi
+Kiba
+Kids on the Slope
+Kiki's Delivery Service
+Kill la Kill
+Kimi ni Todoke; From Me to You
+Kino's Journey
+Kiznaiver
+Knight's & Magic
+Knights of Sidonia
+Kokoro Connect
+KonoSuba God's Blessing on This Wonderful World!
+Laid-Back Camp
+Last Exile
+Little Busters!
+Little Witch Academia
+Lord El-Melloi II Case Files; Rail Zeppelin Grace Note (In Progress)
+Lord Marksman and Vanadis
+Love and Lies
+Lovely★Complex
+Lucky☆Star
+Lupin the Third, The Woman Called Fujiko Mine
+Macross F
+Macross Plus
+Macross Zero
+Macross Δ
+Made in Abyss
+Madlax
+Maid Sama!
+Major 2nd
+Maoyu ~ Archenemy & Hero
+Maquia; When the Promised Flower Blooms
+March comes in like a lion
+Mary and the Witch's Flower
+Medaka Box
+Megalo Box
+Michiko & Hatchin
+Mirai
+Miss Kobayashi's Dragon Maid
+Mob Psycho 100
+Modao Zushi
+Mononoke
+Monster
+Monthly Girls' Nozaki-kun
+Moribito - Guardian of the Spirit
+Mushi-Shi
+My Bride is a Mermaid
+My Little Monster
+My Neighbor Totoro
+My Teen Romantic Comedy SNAFU
+My Two-Faced Little Sister
+Myriad Colors Phantom World
+Nana
+Napping Princess
+Nausicaä of the Valley of the Wind
+Neon Genesis Evangelion
+New Game!
+Nichijou - My Ordinary Life
+Nisekoi; False Love
+No.6
+Nobunaga Concierto
+Nodame Cantabile
+Noein; to your other self
+Noir
+Non Non Biyori
+Now and Then, Here and There
+Okaasan online (In Progress)
+Okami-San and Her Seven Companions
+One Outs
+One Punch Man
+Onihei
+Only Yesterday
+Ouran High School Host Club
+Outbreak Company
+Outlaw-Star
+Pale Cocoon
+PandoraHearts
+Paprika
+Paranoia Agent
+Parasyte -the maxim-
+Patema Inverted
+Penguindrum
+Persona 3
+Persona 4 The Animation
+Persona 5 The Animation
+Persona; Trinity Soul
+Phantom; Requiem for the Phantom
+Phi-Brain ~ Puzzle of God
+Place to Place
+Planetarian
+Planetes
+Plastic Memories
+Pom Poko
+Ponyo
+Porco Rosso
+Princess Mononoke
+Princess Principal
+Prison School
+Psychic Squad
+Psycho-Pass
+Puella Magi Madoka Magica
+Rage of Bahamut; Genesis
+Rainbow
+Rascal Does Not Dream of Bunny Girl Senpai
+Re;CREATORS
+Recovery of an MMO Junkie
+Redline
+ReLIFE
+Revolutionary Girl Utena
+Riddle Story of Devil
+Rosario + Vampire
+Saekano; How to Raise a Boring Girlfriend
+Sakura Quest
+Samurai Champloo
+Samurai X
+Sands of Destruction
+Sankarea; Undying Love
+Sarazanmai
+Sayonara, Zetsubou-Sensei
+School Rumble
+School-Live!
+Scrapped Princess
+Scum's Wish
+Sekirei
+selector infected WIXOSS
+Seraph of the End; Vampire Reign
+Serial Experiments Lain
+Shigurui; Death Frenzy
+Shiki
+Shimoneta; A Boring World Where the Concept of Dirty Jokes Doesn't Exist
+Shirobako
+Shonen Onmyoji
+Shouwa Genroku Rakugo Shinjuu
+Silver Spoon
+Sirius the Jaeger
+Skip Beat!
+Snow White with the Red Hair
+Soul Eater
+Sound of the Sky
+Space☆Dandy
+Special A (S.A)
+Star Blazers; Space Battleship Yamato 2199
+Steamboy
+Steins;Gate
+Steins;Gate 0
+Strike the Blood
+Summer Wars
+Sunday Without God
+Sword Art Online; Alternative Gun Gale Online
+Sword of the Stranger
+Sword Story
+Tales from Earthsea
+Tales of Demons and Gods
+Tales of the Abyss
+Tales of Vesperia ~The First Strike~
+Tales of Zestiria the X
+Tamako Market
+Tanaka-kun is Always Listless
+Tegami Bachi; Letter Bee
+Tekkon Kinkreet
+Tenchi Muyo! War on Geminar
+Terror in Resonance
+Texhnolyze
+The Ambition of Oda Nobuna
+The Ancient Magus' Bride
+The Anthem of the Heart
+The Beast Claw
+The Boy and the Beast
+The Cat Returns
+The Daughter of 20 Faces
+The Disastrous Life of Saiki K
+The Dragon Prince
+The Eccentric Family
+The Empire of Corpses
+The Fruit of Grisaia
+The Future Diary
+The Garden of Sinners
+The Garden of Words
+The Girl Who Leapt Through Time
+The Heroic Legend of Arslan
+The Irregular at Magic High School
+The Legend of the Legendary Heroes
+The Light of a Firefly Forest
+The Melancholy of Haruhi Suzumiya
+The Night Is Short, Walk on Girl
+The Perfect Insider
+The Pet Girl of Sakurasou
+The Place Promised in Our Early Days
+The Princess and the Pilot
+The Quintessential Quintuplets
+The Red Turtle
+The Royal Tutor
+The Secret World of Arrietty
+The Severing Crime Edge
+The Sky Crawlers
+The Story of Saiunkoku
+The Super Dimension Fortress Macross
+The Tale of the Princess Kaguya
+The Tatami Galaxy
+The Testament of Sister New Devil
+The Twelve Kingdoms
+The Wind Rises
+The World God Only Knows
+The World is Still Beautiful
+They Are My Noble Masters, Kimiaru
+Tiger & Bunny
+Time of Eve
+Tokyo Godfathers
+Tokyo Magnitude 8.0
+Tower of Druaga; The Aegis of Uruk
+Trigun
+Tsubasa RESERVoir CHRoNiCLE
+Tsubasa RESERVoir CHRoNiCLE X xxxHOLiC
+Tsugumomo
+Tsurezure Children
+Twin Star Exorcists
+Unbreakable Machine-Doll
+Uninhabited Planet Survive
+Unlimited Psychic Squad
+Utawarerumono
+Valkyria Chronicles
+Vandread
+Vinland Saga (In Progress)
+Waiting in the Summer
+WataMote; No Matter How I Look At It, It's You Guys' Fault I'm Unpopular!
+We Never Learn
+Welcome to the N.H.K
+When Marnie Was There
+Whisper of the Heart
+White Album 2
+Wise Man's Grandchild
+Wolf's Rain
+Working!!
+WorldEnd; What do you do at the end of the world Are you busy Will you save us
+Wotakoi; Love is Hard for Otaku
+X
+xxxHOLiC
+Yamada-kun and the Seven Witches
+Yona of the Dawn
+Yuri!!! On ICE
+Yusibu; I couldnt become a hero, so I reluctantly decided to get a job
+Yuuna and the Haunted Hot Springs
+Zaregoto Series
+Zombieland Saga
+[C] CONTROL - The Money and Soul of Possibility
+A Silent Voice
+Accel World
+Akame ga Kill
+Akashic Records of The Bastard Magic Instructor
+Angel Beats!
+Anohana; The Flower We Saw That Day
+Assassination Classroom
+Blade Dance of the Elementalers
+Btooom!
+Children of the Whales
+Chivalry of a Failed Knight
+Deadman Wonderland
+Death March to the Parallel World Rhapsody
+Denpa Kyoushi (Ultimate Otaku Teacher)
+ERASED
+Goblin Slayer
+Golden Time
+Guilty Crown
+Hai to Gensou no Grimgar
+How Not to Summon a Demon Lord
+Kemono Friends
+Koro Sensei Quest
+Land of the Lustrous
+Log Horizon
+Magi; Adventure of Sinbad
+Magi; The Labyrinth of Magic
+No Game No Life
+Noragami
+Overlord
+Re;ZERO Starting Life in Another World
+Rokka; Braves of the Six Flowers
+RWBY
+Spice and Wolf
+Spirited Away
+That Time I Got Reincarnated as a Slime
+The Asterisk War The Academy City on the Water
+The Devil is a Part-Timer!
+The King's Avatar
+The Promised Neverland
+The Rising of the Shield Hero
+The Sacred Blacksmith
+The Saga of Tanya the Evil
+Tokyo Ghoul
+Toradora
+Violet Evergarden
+Wolf Children
+World Break; Aria of Curse for a Holy Swordsman
+Your Lie in April
+Your Name

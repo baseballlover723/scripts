@@ -3,9 +3,12 @@ require 'colorize'
 require 'shellwords'
 
 PATHS = [
-  "/mnt/c/Users/Philip Ross/Downloads/Season 3",
+  "/mnt/c/Users/Philip Ross/Downloads/Ghost Hound",
+  # "/mnt/c/Users/Philip Ross/Downloads/Season 3",
+  # "/mnt/g/anime/The Sacred Blacksmith",
+  # "/mnt/d/anime/Tokyo Ghoul/Season 3",
 # "/mnt/c/Users/Philip Ross/Downloads/Place to Place",
-# '/mnt/c/Users/Philip Ross/Downloads/Black Lagoon/Season 1',
+# '/mnt/c/Users/Philip Ross/Downloads/Season 2',
 # '/mnt/c/Users/Philip Ross/Downloads/Black Lagoon/Season 2',
 # '/mnt/c/Users/Philip Ross/Downloads/Black Lagoon/Season 3',
 # '/mnt/c/Users/Philip Ross/Downloads/Accel World',
@@ -94,17 +97,17 @@ def set_default(path, default_tracks)
     when 'a'
       numb_audio.times do |i|
         i += 1
-        cmd += " --edit track:#{track_type}#{i} --set flag-default=0" if i != track_type_numb
+        cmd += " --edit track:#{track_type}#{i} --set flag-default=0 --set flag-forced=0" if i != track_type_numb
       end
     when 's'
       numb_subtitles.times do |i|
         i += 1
-        cmd += " --edit track:#{track_type}#{i} --set flag-default=0" if i != track_type_numb
+        cmd += " --edit track:#{track_type}#{i} --set flag-default=0 --set flag-forced=0" if i != track_type_numb
       end
     end
 
     # set given tracks as default
-    cmd += " --edit track:#{default_track} --set flag-default=1"
+    cmd += " --edit track:#{default_track} --set flag-default=1 --set flag-forced=0"
 
   end
 

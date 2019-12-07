@@ -107,6 +107,26 @@ ALL_ARCS = {
       21..41 => 'The Sneak Entry',
       42..63 => 'Soul Society; The Rescue',
     }
+  ),
+  'Fairy Tail': RangedHash.new(
+    {
+      1..2 => 'Macao',
+      3..4 => 'Daybreak',
+      5..10 => 'Lullaby',
+      11..20 => 'Galuna Island',
+      21..29 => 'Phantom Lord',
+      30..32 => 'Loke',
+      33..40 => 'Tower of Heaven',
+      41..51 => 'Battle of Fairy Tail',
+      52..68 => 'Oración Seis',
+      69..75 => 'Daphne filler',
+      76..95 => 'Edolas',
+      96..122 => 'Tenrou Island',
+      123..124 => 'X791',
+      'movie1' => 'The Phoenix Priestess',
+      125..150 => 'Key of the Starry Sky filler',
+      151..175 => 'Grand Magic Games'
+    }
   )
 }.with_indifferent_access
 

@@ -6,7 +6,8 @@ require 'fileutils'
 require 'set'
 require_relative 'arcs'
 
-PATH = '/mnt/c/Users/Philip Ross/Downloads/Naruto; Shippūden/'
+# PATH = '/mnt/c/Users/Philip Ross/Downloads/Naruto; Shippūden/'
+PATH = '/mnt/c/Users/Philip Ross/Downloads/Fairy Tail (Copy)/'
 # PATH = '/mnt/d/Naruto; Shippūden/'
 # PATH = '../../raided/Naruto/'
 PATH << '/' unless PATH.end_with? '/'
@@ -30,6 +31,7 @@ end
 IGNORE_FOLDERS = [
   'Movies',
 ]
+IGNORE_PREFIX = '[bonkai77]'
 
 # puts ARCS.pretty_inspect
 
@@ -48,8 +50,11 @@ def gather_files(path)
     next unless File.file? f
     directory_name = File.basename File.dirname f
     next if IGNORE_FOLDERS.include? directory_name
+    next if f.end_with?('.enc')
 
     filename = File.basename(f)
+    filename = filename[IGNORE_PREFIX.length..-1] if filename.start_with?(IGNORE_PREFIX)
+
     episode_number = filename[/\d+/].to_i
     FILES[episode_number] = f
   end

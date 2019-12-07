@@ -3,8 +3,8 @@ require 'concurrent'
 require 'colorize'
 require 'active_support/core_ext/string/indent'
 
-# PATH = '/mnt/d/anime'
-PATH = '/mnt/e/tv'
+PATH = '/mnt/d/anime'
+# PATH = '/mnt/e/tv'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 # not light for work around with ansi colors in the log file
@@ -101,6 +101,7 @@ def main
     pool.post do
       analyze_show show, PATH
     end
+    break
     count += 1
     # break if count > 4
   end
@@ -118,8 +119,10 @@ def analyze_show(show, path)
     analyze_show(entry, path + '/' + anime.name) and next if nested_show? entry
     if File.directory?("#{path}/#{anime.name}/#{entry}")
       analyze_season Season.new(anime, entry), path
+      break
     else
       analyze_episode root_season, entry, path
+      break
     end
   end
   if root_season.episodes.empty?
@@ -133,14 +136,27 @@ def analyze_season(season, path)
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
     analyze_episode season, entry, path
+    break
   end
   print "analyzed #{season.anime.name}: #{season.name}\n"
 end
 
 def analyze_episode(season, episode_name, path)
+  puts episode_name
+  begin
   path = season.name == 'root' ? "#{path}/#{season.anime.name}/#{episode_name}" : "#{path}/#{season.anime.name}/#{season.name}/#{episode_name}"
   raw_episode = Mediainfo.new path
+  puts raw_episode.inspect
+  puts raw_episode.video?
+  puts raw_episode.raw_response
+  # puts raw_episode.video_stream.height
   episode = Episode.new(season, episode_name, raw_episode.video.height)
+  rescue Exception => e
+    puts "hello"
+    puts "Error during processing: #{$!}"
+    puts "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
+    # puts caller
+  end
 end
 
 def nested_show?(show)
@@ -216,7 +232,7 @@ end
 start = Time.now
 main
 trim_results
-print_results
+# print_results
 finish = Time.now
 File.open('resolutions_log.log', 'a') do |log_file|
   log = DoublePrinter.new $stdout, log_file

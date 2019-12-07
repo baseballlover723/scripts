@@ -6,10 +6,10 @@ LONG_EXTERNAL_PATH = '/mnt/f/anime'
 # EXTERNAL_PATH = '/mnt/c/Users/Philip Ross/Downloads/test/external'
 # LONG_EXTERNAL_PATH = '/mnt/c/Users/Philip Ross/Downloads/test/long_external'
 TEMP_PATH = '/mnt/e/anime'
-REMOTE_PATH = '../../raided/anime'
+REMOTE_PATH = '../../entertainment/anime'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
-HIDE_LOCAL_ONLY = true
+HIDE_LOCAL_ONLY = false
 # TODO hide_local_only make extensible so it dosen't only depend on local and remote
 
 if ARGV.empty?
@@ -211,6 +211,7 @@ class Episode
 end
 
 def main
+  puts Time.now
   if $included.include? 'remote'
     begin
       Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|

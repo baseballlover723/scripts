@@ -94,6 +94,7 @@ end
 
 def analyze_episode(season, episode_name)
   return if episode_name.end_with? 'download'
+  return if episode_name.end_with? '.p'
   season.add_episode(episode_name.to_f) if episode_name.to_f != 0 || episode_name.start_with?('0')
   if episode_name.include? '&'
     season.add_episode(episode_name.split('&')[1].to_f)

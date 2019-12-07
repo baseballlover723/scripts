@@ -2,10 +2,14 @@ require 'dotenv/load'
 require 'pty'
 require 'shellwords'
 
-LOCAL_PATH = '/mnt/d/anime'
-REMOTE_PATH = '/entertainment/anime'
-ANIME_NAME = 'The Devil is a Part-Timer!'
-# ANIME_NAME = 'zWatched/The Eccentric Family'
+# LOCAL_PATH = '/mnt/d/anime'
+# LOCAL_PATH = '/mnt/d/anime'
+# REMOTE_PATH = '/entertainment/anime'
+LOCAL_PATH = '/mnt/e/movies'
+REMOTE_PATH = '/entertainment/movies'
+# ANIME_NAME = 'The Sacred Blacksmith'
+ANIME_NAME = 'Olympus Has Fallen/Angel Has Fallen (2019) [1080p] {x265}'
+# ANIME_NAME = 'zWatched/Sword Art Online (In Progress)/Season 1'
 OPTS = {encoding: 'UTF-8'}
 
 OPTIONS = "-aPv -e 'ssh -p 666' --timeout 10 --protect-args"
@@ -34,6 +38,7 @@ def iterate_recursive(path)
   Dir.glob(escape_glob(path) + '**/*').reject {|f| File.directory? f}.each do |f|
     relative_path = f.sub path, ''
     yield relative_path
+    # break
   end
 
 end

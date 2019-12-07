@@ -8,7 +8,7 @@ require 'mime/types'
 
 PATH = '/mnt/d/anime'
 MOVIE_PATH = '/mnt/e/movies'
-TV_PATH = '/mnt/e/tv'
+TV_PATH = '/mnt/h/tv'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 TIMES = {seconds: 1000.0, minutes: 60.0, hours: 60.0, days: 24.0, months: (365.25/12), years: 12.0}
