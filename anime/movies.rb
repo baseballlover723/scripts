@@ -443,7 +443,6 @@ def print_results
   print " unchanged".uncolor
   print "\n"
 
-  RESULTS.delete :movies # debug
   RESULTS.each do |type, results|
     puts type.to_s.light_yellow
     show_groups = results.values.sort_by(&:name)
