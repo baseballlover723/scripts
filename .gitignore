@@ -40,3 +40,5 @@ build/
 .project
 /anime/.env
 *.log
+*.xlsx
+*.csv
