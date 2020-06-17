@@ -17,6 +17,7 @@ SIZES = {KB: 1024.0, MB: 1024.0, GB: 1024.0, TB: 1024.0}
 EXCLUDED_CODECS = ['x265']
 SEEN_CODECS = Set.new
 EXCEPTIONS = {}
+$numb_files = 0
 
 def human_size(bytes, threshhold)
   prev_string = "#{bytes} Bytes"
@@ -191,6 +192,7 @@ def extract_codec(path)
 
   # codec = `mediainfo --ReadByHuman=0 --ParseSpeed=0 --Inform="Video;%Format%" #{Shellwords.escape(path)}`
   SEEN_CODECS << codec
+  $numb_files += 1
   codec
 end
 
@@ -257,5 +259,7 @@ if !EXCEPTIONS.empty?
   puts 'Erroring shows: ["' + EXCEPTIONS.keys.map(&:to_s).map(&:red).map(&:bold).join('", "') + '"]'
 end
 puts "Codecs Seen: #{SEEN_CODECS.inspect}"
+avg_time = (finish - start) * 1000.0 / $numb_files
+puts "averaged #{avg_time.round(3)} ms per file (#{ActiveSupport::NumberHelper.number_to_delimited $numb_files} files)"
 puts "took #{finish - start} seconds"
 print "\a"
