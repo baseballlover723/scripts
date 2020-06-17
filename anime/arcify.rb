@@ -7,8 +7,8 @@ require 'set'
 require_relative 'arcs'
 
 # PATH = '/mnt/c/Users/Philip Ross/Downloads/Naruto; Shippūden/'
-PATH = '/mnt/c/Users/Philip Ross/Downloads/Fairy Tail (Copy)/'
-# PATH = '/mnt/d/Naruto; Shippūden/'
+PATH = '/mnt/c/Users/Philip Ross/Downloads/World Trigger (Copy)/'
+# PATH = '/mnt/f/anime/Black Clover (In Progress)/'
 # PATH = '../../raided/Naruto/'
 PATH << '/' unless PATH.end_with? '/'
 OPTS = {encoding: 'UTF-8'}
@@ -100,6 +100,7 @@ def arcify(path)
     next unless episode_range.is_a? Range
     episode_range.each do |episode_number|
       file = FILES[episode_number]
+      next unless file
       File.rename file, path + folder_name + File.basename(file)
     end
   end

@@ -125,7 +125,39 @@ ALL_ARCS = {
       123..124 => 'X791',
       'movie1' => 'The Phoenix Priestess',
       125..150 => 'Key of the Starry Sky filler',
-      151..175 => 'Grand Magic Games'
+      151..203 => 'Grand Magic Games',
+      204..226 => 'Eclipse Celestial Spirits filler',
+      227..233 => 'Sun Village',
+      234..265 => 'Tartaros',
+      266..275 => 'Zerø',
+      276..284 => 'Avatar',
+      'movie2' => 'Dragon Cry',
+      285..328 => 'Alvarez Empire'
+    }
+  ),
+  'Black Clover': RangedHash.new(
+    {
+      1..13 => 'Arc 1',
+      14..19 => 'Dungeon Exploration',
+      20..27 => 'Royal Capital',
+      28..39 => 'Eye of the Midnight Sun',
+      40..50 => 'Seabed Temple',
+      51..65 => "Witches' Forest",
+      66..72 => 'Hot Springs Training Camp',
+      73..84 => 'Royal Knight',
+      85..120 => 'Reincarnation',
+      121..132 => 'Arc 10' # In Progress
+    }
+  ),
+  'World Trigger': RangedHash.new(
+    {
+      1..8 => 'Introduction',
+      9..16 => 'Black Trigger',
+      17..21 => 'Border Enlistment',
+      22..37 => 'Large-Scale Invasion',
+      38..48 => 'B-Rank Rank Battles Pt 1',
+      49..63 => 'Fugitive',
+      64..73 => 'B-Rank Rank Battles Pt 2'
     }
   )
 }.with_indifferent_access
