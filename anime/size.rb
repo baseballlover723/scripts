@@ -2,7 +2,6 @@ require 'fileutils'
 require 'colorize'
 require 'active_support'
 require 'active_support/number_helper'
-require 'pry'
 
 PATH = '/mnt/g/anime'
 # PATH = '/entertainment/tv'
@@ -51,8 +50,6 @@ def directory_size(path)
   entries.each do |f|
     next if f == '.' || f == '..' || f == 'zWatched' || f == 'desktop.ini'
     # next unless f.include?(File.basename(path))
-    # binding.pry
-    # exit
     # puts "f: #{f}"
     f = "#{path}/#{f}"
     # puts "basename: #{File.basename path}"
@@ -83,7 +80,7 @@ end
 
 main
 RESULTS.sort_by(&:name)
-File.open('./anime.txt', 'w') do |file|
+File.open('./anime.log', 'w') do |file|
   RESULTS.each do |anime|
     file.puts(anime.name)
   end

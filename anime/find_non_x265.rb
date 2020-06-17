@@ -6,8 +6,6 @@ require 'active_support/core_ext/string/indent'
 require 'shellwords'
 require 'mime/types'
 
-# TODO investigate empty codec in watched
-
 PATH = '/mnt/d/anime'
 MOVIE_PATH = '/mnt/e/movies'
 TV_PATH = '/mnt/h/tv'
@@ -251,10 +249,9 @@ finish = Time.now
 print_results
 if !EXCEPTIONS.empty?
   EXCEPTIONS.each do |show, exception|
-    # 2.5+ check out full_message
     puts "\n*********************************\n\n"
-    puts show.red.bold + ' ' + exception.message
-    puts exception.backtrace
+    puts exception.full_message
+    puts show.red.bold + ': ' + exception.message
   end
   puts 'Erroring shows: ["' + EXCEPTIONS.keys.map(&:to_s).map(&:red).map(&:bold).join('", "') + '"]'
 end
