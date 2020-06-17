@@ -12,7 +12,7 @@ PATHS = [
 #   "/mnt/f/anime/Attack On Titan (In Progress)/Season 3 (In Progress)",
 #   "/entertainment/anime/Attack On Titan (In Progress)/Season 3 (In Progress)",
 ]
-PATHS.each {|p| p << '/' unless p.end_with? '/'}
+PATHS.each { |p| p << '/' unless p.end_with? '/' }
 OPTS = {encoding: 'UTF-8'}
 RENAME = true
 # RENAME = false
@@ -20,7 +20,7 @@ RESULTS = []
 ANIME = false
 IGNORE_PREFIX = '[bonkai77]'
 IGNORE_FILE_ENDING = '.p'
-# NUMBER_INCREMENT = 37
+# NUMBER_INCREMENT = 0
 SECOND_NUMBER_INDEX = 1
 
 def expand_paths
@@ -124,7 +124,7 @@ def extract_number(str, rename, first_number)
 end
 
 def escape_glob(s)
-  s.gsub(/[\\\{\}\[\]\?]/) {|x| "\\"+x}
+  s.gsub(/[\\\{\}\[\]\?]/) { |x| "\\" + x }
 end
 
 def yesno(prompt = 'Continue?', default = true)
@@ -134,7 +134,7 @@ def yesno(prompt = 'Continue?', default = true)
   until %w[y n].include? a
     original_verbosity = $VERBOSE
     $VERBOSE = nil
-    a = ask("#{prompt} #{s} ") {|q| q.limit = 1; q.case = :downcase}
+    a = ask("#{prompt} #{s} ") { |q| q.limit = 1; q.case = :downcase }
     $VERBOSE = original_verbosity
     a = d if a.length == 0
   end
@@ -144,7 +144,7 @@ end
 def analyze_missing
   missing_episodes_numbers = []
   set = Set.new
-  duplicates = RESULTS.select {|e| !set.add?(e)}
+  duplicates = RESULTS.select { |e| !set.add?(e) }
 
   puts "duplicate episode numbers: #{duplicates.map(&:to_s).map(&:light_red).join(', ')}" unless duplicates.empty?
   RESULTS.min.upto(RESULTS.max).each do |numb|
