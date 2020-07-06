@@ -6,7 +6,7 @@ EXTERNAL_PATHES = {movies: '/mnt/h/movies', tv: '/mnt/i/tv'}
 REMOTE_PATHES = {movies: '../../entertainment/movies', tv: '../../entertainment/tv'}
 # REMOTE_PATHES = {movies: '../../entertainment/movies'}
 OPTS = {encoding: 'UTF-8'}
-RESULTS = {movies: {}, tv: {}, local: {}}
+RESULTS = {movies: {}, tv: {}}
 MOVIE_EXTENSIONS = ['.mkv', '.mp4', '.m4v', '.srt', '.avi']
 BLACKLIST = ['anime', 'Naruto', 'Naruto - Copy']
 # FILTER = /Season \d\d - Episode(s?) \d\d\d-\d\d\d/
@@ -452,6 +452,7 @@ def print_results
   end
 
   if $included.include?('remote') && $included.include?('external')
+    local = 0
     remote = 0
     external = 0
     RESULTS.each_value do |show_groups|
@@ -459,6 +460,8 @@ def print_results
         show_group.shows.each_value do |show|
           show.seasons.each_value do |season|
             season.episodes.each_value do |episode|
+              next if defined?(HIDE_LOCAL_ONLY) && HIDE_LOCAL_ONLY && episode.remote_size == 0 && episode.local_size != 0
+              local += episode.local_size
               remote += episode.remote_size
               external += episode.external_size
             end
@@ -466,7 +469,7 @@ def print_results
         end
       end
     end
-    transfer_amount = external
+    transfer_amount = local
     transfer = ActiveSupport::NumberHelper.number_to_human_size(transfer_amount, {precision: 5, strip_insignificant_zeros: false})
     kilobytes_per_sec = 1200
     est = (transfer_amount) / (1024 * kilobytes_per_sec)
