@@ -37,8 +37,8 @@ class Season < BaseSeason
 end
 
 class Script < BaseScript
-  def initialize
-    super
+  def initialize(results = {})
+    super(results)
     @analyze_episode = false
   end
 
@@ -64,6 +64,9 @@ end
 
 def main
   script = Script.new
+  # script.location = 'local' # debug
+  # script.iterate '/mnt/d/anime'
+  # script.iterate '/mnt/c/Users/Philip Ross/Downloads/anime'
   script.remotely_iterate("/entertainment/anime")
   # script.location = 'local' # debug
   # script.iterate '/mnt/c/Users/Philip Ross/Downloads/anime'

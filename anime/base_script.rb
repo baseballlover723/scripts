@@ -3,27 +3,30 @@
 # DONE Create Common iteration
 # MOSTLY DONE Hookpoints: analyze episode, trim results, print results, analyze season?, analyze show?
 # DONE Handle comparing scripts, (making multiple iterations kept seperate)
-# TODO handle remote execution
-# TODO load exisiting results onto remote
-#   upload files to remote
-#   execute files
-#   handle results
+# DONE handle remote execution
+# DONE load exisiting results onto remote
+# DONE  upload files to remote
+# DONE  execute files
+# DONE  handle results
+# TODO delete on remote
+# TODO handle results merging from remote
 require_relative 'classes'
 
 require 'dotenv/load'
 require 'net/ssh'
 require 'net/sftp'
 require 'pathname'
+require 'tempfile'
 
 class BaseScript
   attr_accessor :opts, :analyze_show, :analyze_season, :analyze_episode, :results, :location, :start_time
 
-  def initialize()
+  def initialize(results = {})
     @opts = {encoding: 'UTF-8'}
     @analyze_show = true
     @analyze_season = true
     @analyze_episode = true
-    @results = {}
+    @results = results
     @start_time = Time.now
   end
 
@@ -52,12 +55,16 @@ class BaseScript
     puts "remotely iterating over #{path}"
     current_path = Pathname.new(__dir__)
     remote_folder = "remote_files/"
-    command = "ruby #{remote_folder}#{File.basename($PROGRAM_NAME)} #{path}"
+    results_file = Tempfile.new('results', binmode: true)
+    results_file.write(Marshal::dump(results))
+    results_file.rewind
+    command = "ruby #{remote_folder}#{File.basename($PROGRAM_NAME)} #{path} #{remote_folder + File.basename(results_file.path)}"
     # puts "command: #{command}"
     paths = [File.absolute_path('classes.rb')] + caller_locations(0).map { |st| st.absolute_path }
     paths = paths.uniq.map do |path|
       [path, remote_folder + Pathname.new(path).relative_path_from(current_path).to_s]
     end.to_h
+    paths = paths.merge({results_file.path => remote_folder + File.basename(results_file.path)})
     begin
       Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
         ssh.exec! "mkdir -p #{remote_folder}"
@@ -70,7 +77,6 @@ class BaseScript
         ssh.exec! "rm -rf #{remote_folder}"
         begin
           remote_results = Marshal::load(serialized_results)
-          # puts "remote_results: #{remote_results}"
           @results.merge!(remote_results) do |key, old, new|
             puts "key: #{key}, old: #{old}, new: #{new}"
           end
@@ -217,7 +223,8 @@ class BaseScript
 end
 
 def remote_main
-  script = Script.new
+  results = Marshal::load(File.read(ARGV[1]))
+  script = Script.new(results)
   script.location = 'remote' # debug
   script.iterate(ARGV[0])
   script.trim_results
