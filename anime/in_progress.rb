@@ -7,15 +7,14 @@
 # TODO remote stuff
 #   read remote
 #   rename remote
-# 
 
-require_relative 'base_script'
+require_relative './base_script'
 if ARGV.empty?
   require 'highline/import'
   require 'colorize'
-
-  PATH_TYPES = [:remote_path, :local_path, :external_path, :long_external_path]
 end
+
+PATH_TYPES = [:remote_path, :local_path, :external_path, :long_external_path]
 
 class Show < BaseShow
   attr_accessor :new_name, *PATH_TYPES
@@ -65,15 +64,16 @@ end
 
 def main
   script = Script.new
-  script.location = 'local' # debug
-  script.iterate '/mnt/c/Users/Philip Ross/Downloads/anime'
-  script.location = 'external' # debug
-  script.iterate '/mnt/c/Users/Philip Ross/Downloads/anime external'
-# script.iterate '/mnt/d/anime'
-# script.iterate '/mnt/g/anime'
-# script.iterate '/mnt/f/anime'
+  script.remotely_iterate("/entertainment/anime")
+  # script.location = 'local' # debug
+  # script.iterate '/mnt/c/Users/Philip Ross/Downloads/anime'
+  # script.location = 'external' # debug
+  # script.iterate '/mnt/c/Users/Philip Ross/Downloads/anime external'
+  # script.iterate '/mnt/d/anime'
+  # script.iterate '/mnt/g/anime'
+  # script.iterate '/mnt/f/anime'
 
-# puts script.results
+  # puts script.results
   script.trim_results
   script.end_time
   results = script.results
@@ -106,4 +106,8 @@ def rename(season)
   end
 end
 
-main
+if ARGV.empty?
+  main
+else
+  remote_main
+end

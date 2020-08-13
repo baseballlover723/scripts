@@ -4,21 +4,31 @@
 # MOSTLY DONE Hookpoints: analyze episode, trim results, print results, analyze season?, analyze show?
 # DONE Handle comparing scripts, (making multiple iterations kept seperate)
 # TODO handle remote execution
+# TODO load exisiting results onto remote
 #   upload files to remote
 #   execute files
 #   handle results
 require_relative 'classes'
 
+require 'dotenv/load'
+require 'net/ssh'
+require 'net/sftp'
+require 'pathname'
+
 class BaseScript
   attr_accessor :opts, :analyze_show, :analyze_season, :analyze_episode, :results, :location, :start_time
 
-  def initialize
+  def initialize()
     @opts = {encoding: 'UTF-8'}
     @analyze_show = true
     @analyze_season = true
     @analyze_episode = true
     @results = {}
     @start_time = Time.now
+  end
+
+  def local?
+    ARGV.empty?
   end
 
   def end_time
@@ -38,9 +48,44 @@ class BaseScript
     @analyze_episode
   end
 
+  def remotely_iterate(path)
+    puts "remotely iterating over #{path}"
+    current_path = Pathname.new(__dir__)
+    remote_folder = "remote_files/"
+    command = "ruby #{remote_folder}#{File.basename($PROGRAM_NAME)} #{path}"
+    # puts "command: #{command}"
+    paths = [File.absolute_path('classes.rb')] + caller_locations(0).map { |st| st.absolute_path }
+    paths = paths.uniq.map do |path|
+      [path, remote_folder + Pathname.new(path).relative_path_from(current_path).to_s]
+    end.to_h
+    begin
+      Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
+        ssh.exec! "mkdir -p #{remote_folder}"
+        ssh.sftp.connect do |sftp|
+          paths.each do |abs, rel|
+            sftp.upload!(abs, rel)
+          end
+        end
+        serialized_results = ssh.exec! "source load_rbenv && #{command}"
+        ssh.exec! "rm -rf #{remote_folder}"
+        begin
+          remote_results = Marshal::load(serialized_results)
+          # puts "remote_results: #{remote_results}"
+          @results.merge!(remote_results) do |key, old, new|
+            puts "key: #{key}, old: #{old}, new: #{new}"
+          end
+          return @results
+        rescue TypeError => e
+          puts 'Error reading results from remote'
+          puts serialized_results
+        end
+      end
+    end
+  end
+
   def iterate(path)
     # @location = calc_location(path)
-    puts "running on #{@location}"
+    puts "running on #{@location}" if local?
     iterate_shows path
     @results
   end
@@ -131,7 +176,7 @@ class BaseScript
   end
 
   def trim_results
-    puts 'trimming results'
+    puts 'trimming results' if local?
     @results.each_value do |show|
       show.seasons.each_value do |season|
         season.episodes.each_value do |episode|
@@ -164,8 +209,17 @@ class BaseScript
       $VERBOSE = nil
       a = ask("#{prompt} #{s} ") { |q| q.limit = 1; q.case = :downcase }
       $VERBOSE = original_verbosity
+      exit 130 if a == "\cC" # handle ctrl c
       a = d if a.length == 0
     end
     a == 'y'
   end
+end
+
+def remote_main
+  script = Script.new
+  script.location = 'remote' # debug
+  script.iterate(ARGV[0])
+  script.trim_results
+  puts Marshal::dump(script.results)
 end
