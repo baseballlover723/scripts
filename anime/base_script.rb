@@ -1,22 +1,13 @@
-# DONE Create Base script
-# DONE Create Common Base Classes (ShowGroup?, Show, Seasons, Episode)
-# DONE Create Common iteration
-# MOSTLY DONE Hookpoints: analyze episode, trim results, print results, analyze season?, analyze show?
-# DONE Handle comparing scripts, (making multiple iterations kept seperate)
-# DONE handle remote execution
-# DONE load exisiting results onto remote
-# DONE  upload files to remote
-# DONE  execute files
-# DONE  handle results
-# TODO delete on remote
-# TODO handle results merging from remote
+# TODO print results Hookpoint
 require_relative 'classes'
 
-require 'dotenv/load'
-require 'net/ssh'
-require 'net/sftp'
-require 'pathname'
-require 'tempfile'
+if ARGV.empty?
+  require 'dotenv/load'
+  require 'net/ssh'
+  require 'net/sftp'
+  require 'pathname'
+  require 'tempfile'
+end
 
 class BaseScript
   attr_accessor :opts, :analyze_show, :analyze_season, :analyze_episode, :results, :location, :start_time
@@ -59,14 +50,13 @@ class BaseScript
     results_file.write(Marshal::dump(results))
     results_file.rewind
     command = "ruby #{remote_folder}#{File.basename($PROGRAM_NAME)} #{path} #{remote_folder + File.basename(results_file.path)}"
-    # puts "command: #{command}"
     paths = [File.absolute_path('classes.rb')] + caller_locations(0).map { |st| st.absolute_path }
     paths = paths.uniq.map do |path|
       [path, remote_folder + Pathname.new(path).relative_path_from(current_path).to_s]
     end.to_h
     paths = paths.merge({results_file.path => remote_folder + File.basename(results_file.path)})
     begin
-      Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
+      remote_ssh do |ssh|
         ssh.exec! "mkdir -p #{remote_folder}"
         ssh.sftp.connect do |sftp|
           paths.each do |abs, rel|
@@ -76,10 +66,7 @@ class BaseScript
         serialized_results = ssh.exec! "source load_rbenv && #{command}"
         ssh.exec! "rm -rf #{remote_folder}"
         begin
-          remote_results = Marshal::load(serialized_results)
-          @results.merge!(remote_results) do |key, old, new|
-            puts "key: #{key}, old: #{old}, new: #{new}"
-          end
+          @results = Marshal::load(serialized_results)
           return @results
         rescue TypeError => e
           puts 'Error reading results from remote'
@@ -89,8 +76,14 @@ class BaseScript
     end
   end
 
+  def remote_ssh
+    Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
+      yield ssh
+    end
+  end
+
   def iterate(path)
-    # @location = calc_location(path)
+    @location = calc_location(path)
     puts "running on #{@location}" if local?
     iterate_shows path
     @results
