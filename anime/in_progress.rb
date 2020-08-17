@@ -1,20 +1,10 @@
-# DONE Get list of shows with (In Progress) in remote, local and external
-# DONE store paths and names for remote, local, and external
-# DONE iterate over
-# query api to see if it indeed done
-# ask yes or no to remove (In Progress)
-# DONE rename folders on local and external
-# TODO remote stuff
-#   read remote
-#   rename remote
-
 require_relative './base_script'
 if ARGV.empty?
   require 'highline/import'
   require 'colorize'
 end
 
-PATH_TYPES = [:remote_path, :local_path, :external_path, :long_external_path]
+PATH_TYPES = [:remote_path, :local_path, :local_watched_path, :external_path, :external_watched_path, :long_external_path, :long_external_watched_path]
 
 class Show < BaseShow
   attr_accessor :new_name, *PATH_TYPES
@@ -65,6 +55,11 @@ class Script < BaseScript
     !season.name.include? 'In Progress'
   end
 
+  def calc_location(path)
+    location = super
+    path.match?(/\/zWatched\/?$/) ? "#{location}_watched" : location
+  end
+
   def rename_results
     remote_ssh do |ssh|
       results.each_value do |show|
@@ -100,35 +95,19 @@ end
 
 def main
   script = Script.new
-  # script.location = 'local' # debug
-  # # script.iterate '/mnt/d/anime'
-  # script.iterate '/mnt/c/Users/Philip Ross/Downloads/anime'
-  # # script.remotely_iterate("/entertainment/anime")
-  # script.remotely_iterate("/home/baseballlover723/remote_test/anime")
-  # puts script.results.size
-  #
-  # script.remotely_iterate("/home/baseballlover723/remote_test/anime")
-  # script.location = 'local' # debug
-  # script.iterate '/mnt/c/Users/Philip Ross/Downloads/anime'
-  # script.location = 'external' # debug
-  # script.iterate '/mnt/c/Users/Philip Ross/Downloads/anime external'
 
   script.remotely_iterate("/entertainment/anime")
   script.iterate '/mnt/d/anime'
+  script.iterate '/mnt/d/anime/zWatched'
   script.iterate '/mnt/g/anime'
+  script.iterate '/mnt/g/anime/zWatched'
   script.iterate '/mnt/f/anime'
+  script.iterate '/mnt/f/anime/zWatched'
 
   script.trim_results
   script.end_time
 
-  # puts "\n\n" # debug
-
   script.rename_results
-
-  # puts "\n\n" # debug
-  # puts results.map { |_, r| r.name } # debug
-  # puts results.size # debug
-  # puts results.values.first.seasons.values.first#.episodes.values.first
 end
 
 if ARGV.empty?
