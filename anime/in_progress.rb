@@ -89,7 +89,7 @@ class Script < BaseScript
   end
 
   def remote_rename(ssh, old_path, new_path)
-    ssh.exec!("mv '#{old_path}' '#{new_path}'")
+    ssh.exec!("mv \"#{old_path}\" \"#{new_path}\"")
   end
 end
 
