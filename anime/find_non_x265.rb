@@ -5,10 +5,13 @@ require 'active_support/number_helper'
 require 'active_support/core_ext/string/indent'
 require 'shellwords'
 require 'mime/types'
+require 'json'
+require_relative './cache'
 
 PATH = '/mnt/d/anime'
 MOVIE_PATH = '/mnt/e/movies'
 TV_PATH = '/mnt/h/tv'
+CACHE_PATH = 'find_non_x265s.cache.json'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 SIZES = {KB: 1024.0, MB: 1024.0, GB: 1024.0, TB: 1024.0}
@@ -96,7 +99,55 @@ class Episode
   end
 end
 
+class Cache < BaseCache
+  def initialize(cache)
+    super(cache)
+  end
+
+  def self.load_episode(path, last_modified, payload)
+    CacheEpisode.new(path, last_modified, payload)
+  end
+
+  def write(path=CACHE_PATH)
+    super(path)
+  end
+end
+
+CODEC_KEY = 'codec'.freeze
+SIZE_KEY = 'size'.freeze
+class CacheEpisode < BaseCachePayload
+
+  def initialize(path, last_modified, payload)
+    super(path, last_modified, payload)
+  end
+
+  def codec
+    payload[CODEC_KEY]
+  end
+
+  def codec=(codec)
+    payload[CODEC_KEY] = codec
+  end
+
+  def size
+    payload[SIZE_KEY]
+  end
+
+  def size=(size)
+    payload[SIZE_KEY] = size
+  end
+
+  def as_json(options={})
+    hash = super(options)
+    hash[:codec] = codec
+    hash[:size] = size
+    hash
+  end
+end
+
 def main
+  $cache = Cache.load(CACHE_PATH)
+
   pool = Concurrent::FixedThreadPool.new(16)
   # iterate MOVIE_PATH, pool
   # iterate TV_PATH, pool
@@ -105,6 +156,7 @@ def main
 
   pool.shutdown
   pool.wait_for_termination
+  $cache.write
   puts 'Done: Calculating'
 end
 
@@ -175,12 +227,12 @@ def analyze_episode(season, episode_name, path)
   return unless is_video?(File.extname(path))
 
   episode = find_episode season, episode_name
-  # raw_episode = Mediainfo.new path
-  # episode.size = raw_episode.size if raw_episode.size
-  # puts `mediainfo #{Shellwords.escape(path)}`
-  # episode.size = `mediainfo --ReadByHuman=0 --ParseSpeed=0 --Inform="General;%Duration%" #{Shellwords.escape(path)}`.to_i
-  episode.size = File.size(path)
-  episode.codec = extract_codec(path)
+  data = $cache.get(path) do
+    {CODEC_KEY => extract_codec(path), SIZE_KEY => File.size(path)}
+  end
+  episode.size = data[SIZE_KEY]
+  episode.codec = data[CODEC_KEY]
+  SEEN_CODECS << data[CODEC_KEY]
 end
 
 def extract_codec(path)
@@ -188,9 +240,8 @@ def extract_codec(path)
   codec = codec.sub('video/', '') if codec.start_with?('video/')
   codec = codec[/H\d\d\d/].sub('H', 'x') if codec[/H\d\d\d/]
 
-  # codec = `mediainfo --ReadByHuman=0 --ParseSpeed=0 --Inform="Video;%Format%" #{Shellwords.escape(path)}`
-  SEEN_CODECS << codec
   $numb_files += 1
+
   codec
 end
 
