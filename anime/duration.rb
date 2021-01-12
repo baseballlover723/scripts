@@ -5,30 +5,18 @@ require 'active_support/number_helper'
 require 'active_support/core_ext/string/indent'
 require 'shellwords'
 require 'mime/types'
+require 'json'
+require_relative './cache'
 
 PATH = '/mnt/d/anime'
 MOVIE_PATH = '/mnt/e/movies'
 TV_PATH = '/mnt/h/tv'
+CACHE_PATH = 'durations.cache.json'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 TIMES = {seconds: 1000.0, minutes: 60.0, hours: 60.0, days: 24.0, months: (365.25/12), years: 12.0}
 #TODO investigate why a certain scientific railgun shows up on a certain magical index iwth 47 mins?
 # commit and push
-
-def read_file
-  path = "/tmp/anime_duration"
-  return unless File.exist? path
-  file = File.new(path)
-  r = Marshal::load(file)
-  puts r
-  kljh
-end
-
-# read_file
-
-def save_results
-  Marshal::dump(RESULTS)
-end
 
 def human_duration(ms, threshhold)
   prev_string = "#{ms} milliseconds"
@@ -102,7 +90,39 @@ class Episode
   end
 end
 
+class Cache < BaseCache
+  KEY = 'duration'.freeze
+
+  def initialize(cache)
+    super(cache)
+  end
+
+  def self.load_episode(path, last_modified, payload)
+    CacheEpisode.new(path, last_modified, payload[KEY])
+  end
+
+  def write(path=CACHE_PATH)
+    super(path)
+  end
+end
+
+class CacheEpisode < BaseCachePayload
+  alias_attr :duration, :payload
+
+  def initialize(path, last_modified, duration)
+    super(path, last_modified, duration)
+  end
+
+  def as_json(options={})
+    hash = super(options)
+    hash[:duration] = duration
+    hash
+  end
+end
+
 def main
+  $cache = Cache.load(CACHE_PATH)
+
   pool = Concurrent::FixedThreadPool.new(8)
   # iterate MOVIE_PATH, pool
   # iterate TV_PATH, pool
@@ -111,6 +131,7 @@ def main
 
   pool.shutdown
   pool.wait_for_termination
+  $cache.write
   puts 'Done: Calculating'
 end
 
@@ -180,7 +201,9 @@ def analyze_episode(season, episode_name, path)
   episode = find_episode season, episode_name
   # raw_episode = Mediainfo.new path
   # episode.duration = raw_episode.duration if raw_episode.duration
-  episode.duration = `mediainfo --ReadByHuman=0 --ParseSpeed=0 --Inform="General;%Duration%" #{Shellwords.escape(path)}`.to_i
+  episode.duration = $cache.get(path) do
+    `mediainfo --ReadByHuman=0 --ParseSpeed=0 --Inform="General;%Duration%" #{Shellwords.escape(path)}`.to_i
+  end
 end
 
 def nested_show?(show)
@@ -217,7 +240,6 @@ end
 
 start = Time.now
 main
-save_results
 finish = Time.now
 print_results
 puts "took #{human_duration (finish - start) * 1000, 1}"
