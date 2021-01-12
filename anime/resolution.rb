@@ -3,9 +3,12 @@ require 'colorize'
 require 'active_support/core_ext/string/indent'
 require 'shellwords'
 require 'mime/types'
+require 'json'
+require_relative './cache'
 
 PATH = '/mnt/d/anime'
 # PATH = '/mnt/e/tv'
+CACHE_PATH = 'resolutions.cache.json'
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 # not light for work around with ansi colors in the log file
@@ -82,7 +85,39 @@ class Episode
   end
 end
 
+class Cache < BaseCache
+  KEY = 'resolution'.freeze
+
+  def initialize(cache)
+    super(cache)
+  end
+
+  def self.load_episode(path, last_modified, payload)
+    CacheEpisode.new(path, last_modified, payload[KEY])
+  end
+
+  def write(path=CACHE_PATH)
+    super(path)
+  end
+end
+
+class CacheEpisode < BaseCachePayload
+  alias_attr :resolution, :payload
+
+  def initialize(path, last_modified, resolution)
+    super(path, last_modified, resolution)
+  end
+
+  def as_json(options={})
+    hash = super(options)
+    hash[:resolution] = resolution
+    hash
+  end
+end
+
 def main
+  $cache = Cache.load(CACHE_PATH)
+
   shows = Dir.entries PATH, OPTS
 
   count = 0
@@ -107,6 +142,7 @@ def main
   end
   pool.shutdown
   pool.wait_for_termination
+  $cache.write
 end
 
 def analyze_show(show, path)
@@ -141,7 +177,9 @@ end
 def analyze_episode(season, episode_name, path)
   path = season.name == 'root' ? "#{path}/#{season.anime.name}/#{episode_name}" : "#{path}/#{season.anime.name}/#{season.name}/#{episode_name}"
   return unless is_video?(File.extname(path))
-  height = `mediainfo --ReadByHuman=0 --ParseSpeed=0 --Inform="Video;%Height%" #{Shellwords.escape(path)}`.to_i
+  height = $cache.get(path) do
+    `mediainfo --ReadByHuman=0 --ParseSpeed=0 --Inform="Video;%Height%" #{Shellwords.escape(path)}`.to_i
+  end
   Episode.new(season, episode_name, height)
 end
 
