@@ -1,7 +1,8 @@
-require 'mediainfo'
 require 'concurrent'
 require 'colorize'
 require 'active_support/core_ext/string/indent'
+require 'shellwords'
+require 'mime/types'
 
 PATH = '/mnt/d/anime'
 # PATH = '/mnt/e/tv'
@@ -86,22 +87,21 @@ def main
 
   count = 0
   pool = Concurrent::FixedThreadPool.new(8)
-  # watched_shows = Dir.entries PATH + '/zWatched', OPTS
-  # watched_shows.each do |show|
-  #   next if show == '.' || show == '..' || show == 'desktop.ini'
-  #   pool.post do
-  #     analyze_show show, PATH + '/zWatched'
-  #   end
-  #   count += 1
-  #   # break if count > 4
-  # end
+  watched_shows = Dir.entries PATH + '/zWatched', OPTS
+  watched_shows.each do |show|
+    next if show == '.' || show == '..' || show == 'desktop.ini'
+    pool.post do
+      analyze_show show, PATH + '/zWatched'
+    end
+    count += 1
+    # break if count > 4
+  end
   shows.each do |show|
     next if show == '.' || show == '..' || show == 'zWatched'
     # count += 1 and next if count < 4
     pool.post do
       analyze_show show, PATH
     end
-    break
     count += 1
     # break if count > 4
   end
@@ -119,10 +119,8 @@ def analyze_show(show, path)
     analyze_show(entry, path + '/' + anime.name) and next if nested_show? entry
     if File.directory?("#{path}/#{anime.name}/#{entry}")
       analyze_season Season.new(anime, entry), path
-      break
     else
       analyze_episode root_season, entry, path
-      break
     end
   end
   if root_season.episodes.empty?
@@ -136,27 +134,19 @@ def analyze_season(season, path)
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
     analyze_episode season, entry, path
-    break
   end
   print "analyzed #{season.anime.name}: #{season.name}\n"
 end
 
 def analyze_episode(season, episode_name, path)
-  puts episode_name
-  begin
   path = season.name == 'root' ? "#{path}/#{season.anime.name}/#{episode_name}" : "#{path}/#{season.anime.name}/#{season.name}/#{episode_name}"
-  raw_episode = Mediainfo.new path
-  puts raw_episode.inspect
-  puts raw_episode.video?
-  puts raw_episode.raw_response
-  # puts raw_episode.video_stream.height
-  episode = Episode.new(season, episode_name, raw_episode.video.height)
-  rescue Exception => e
-    puts "hello"
-    puts "Error during processing: #{$!}"
-    puts "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
-    # puts caller
-  end
+  return unless is_video?(File.extname(path))
+  height = `mediainfo --ReadByHuman=0 --ParseSpeed=0 --Inform="Video;%Height%" #{Shellwords.escape(path)}`.to_i
+  Episode.new(season, episode_name, height)
+end
+
+def is_video?(ext)
+  MIME::Types.type_for(ext).any? {|mt| mt.media_type == 'video'}
 end
 
 def nested_show?(show)
@@ -232,7 +222,7 @@ end
 start = Time.now
 main
 trim_results
-# print_results
+print_results
 finish = Time.now
 File.open('resolutions_log.log', 'a') do |log_file|
   log = DoublePrinter.new $stdout, log_file
