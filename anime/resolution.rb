@@ -26,11 +26,15 @@ class String
 end
 
 class Anime
-  attr_accessor :name, :seasons
+  attr_accessor :name, :seasons, :all_cached
 
   def initialize(name)
     @name = name
     @seasons = {}
+  end
+
+  def all_cached?
+    seasons.values.map(&:all_cached?).all?
   end
 
   def add_season(season)
@@ -43,13 +47,17 @@ class Anime
 end
 
 class Season
-  attr_accessor :anime, :name, :episodes
+  attr_accessor :anime, :name, :episodes, :all_cached
 
   def initialize(anime, name)
     @anime = anime
     @name = name
     @episodes = {}
     anime.add_season self
+  end
+
+  def all_cached?
+    episodes.values.map(&:cached?).all?
   end
 
   def add_episode(episode)
@@ -70,13 +78,18 @@ class Season
 end
 
 class Episode
-  attr_accessor :season, :name, :resolution
+  attr_accessor :season, :name, :resolution, :cached
 
-  def initialize(season, name, resolution)
+  def initialize(season, name, resolution, cached=false)
     @season = season
     @name = name
     @resolution = resolution
+    @cached = cached
     season.add_episode self
+  end
+
+  def cached?
+    !!@cached
   end
 
   def to_s
@@ -162,7 +175,7 @@ def analyze_show(show, path)
   if root_season.episodes.empty?
     anime.seasons.delete(root_season.name)
   end
-  print "analyzed #{show}\n"
+  print "analyzed #{show}\n" unless anime.all_cached?
 end
 
 def analyze_season(season, path)
@@ -171,16 +184,16 @@ def analyze_season(season, path)
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
     analyze_episode season, entry, path
   end
-  print "analyzed #{season.anime.name}: #{season.name}\n"
+  print "analyzed #{season.anime.name}: #{season.name}\n" unless season.all_cached?
 end
 
 def analyze_episode(season, episode_name, path)
   path = season.name == 'root' ? "#{path}/#{season.anime.name}/#{episode_name}" : "#{path}/#{season.anime.name}/#{season.name}/#{episode_name}"
   return unless is_video?(File.extname(path))
-  height = $cache.get(path) do
+  height, cached = $cache.get(path) do
     `mediainfo --ReadByHuman=0 --ParseSpeed=0 --Inform="Video;%Height%" #{Shellwords.escape(path)}`.to_i
   end
-  Episode.new(season, episode_name, height)
+  Episode.new(season, episode_name, height, cached)
 end
 
 def is_video?(ext)
