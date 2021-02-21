@@ -21,7 +21,6 @@ GEM
     i18n (1.8.3)
       concurrent-ruby (~> 1.0)
     json (2.5.1)
-    mediainfo (0.7.2)
     method_source (1.0.0)
     mime-types (3.3.1)
       mime-types-data (~> 3.2015)
@@ -60,7 +59,6 @@ DEPENDENCIES
   highline (~> 2.0.3)
   httparty (~> 0.17)
   json (~> 2.5)
-  mediainfo (< 1.0.0)
   net-scp (~> 2.0)
   net-sftp (~> 2.1)
   net-ssh (~> 5.2)
@@ -69,4 +67,4 @@ DEPENDENCIES
   pry
 
 BUNDLED WITH
-   2.1.4
+   2.2.7
