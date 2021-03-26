@@ -75,7 +75,7 @@ def main
 end
 
 def iterate(path, type)
-  shows = Dir.entries path, OPTS
+  shows = Dir.entries path, **OPTS
   count = 0
   shows.each do |show|
     next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini'
@@ -95,7 +95,7 @@ def analyze_show(show, path, type)
   $print_buffer << show.indent_path(path)
   print " "  * 120
   print "\r#{show}\r"
-  entries = Dir.entries path, OPTS
+  entries = Dir.entries path, **OPTS
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' # || entry.end_with?('.txt')
     analyze_show(entry, path + '/' + entry, type) and next if nested_show? entry
@@ -110,7 +110,7 @@ end
 
 def analyze_season(season, path, type)
   $print_buffer << season.indent_path(path)
-  entries = Dir.entries path, OPTS
+  entries = Dir.entries path, **OPTS
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
     analyze_episode season, entry, path + '/' + entry, type

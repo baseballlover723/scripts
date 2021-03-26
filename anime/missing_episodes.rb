@@ -44,7 +44,7 @@ class Season
 end
 
 def main
-  shows = Dir.entries PATH, OPTS
+  shows = Dir.entries PATH, **OPTS
 
   count = 0
   shows.each do |show|
@@ -55,7 +55,7 @@ def main
     # break if count > 6
   end
   PATH << '/zWatched'
-  watched_shows = Dir.entries PATH, OPTS
+  watched_shows = Dir.entries PATH, **OPTS
   watched_shows.each do |show|
     next if show == '.' || show == '..' || show == 'desktop.ini'
     analyze_show show
@@ -68,7 +68,7 @@ def analyze_show(show)
   RESULTS[anime.name] = anime
 
   root_season = Season.new(anime, 'root')
-  entries = Dir.entries "#{PATH}/#{anime.name}", OPTS
+  entries = Dir.entries "#{PATH}/#{anime.name}", **OPTS
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
     if File.directory?("#{PATH}/#{anime.name}/#{entry}")
@@ -84,7 +84,7 @@ end
 
 def analyze_season(season)
   # puts "analyzing #{season.anime.name}: #{season.name}"
-  entries = Dir.entries "#{PATH}/#{season.anime.name}/#{season.name}", OPTS
+  entries = Dir.entries "#{PATH}/#{season.anime.name}/#{season.name}", **OPTS
   entries.each do |entry|
     # puts entry
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')

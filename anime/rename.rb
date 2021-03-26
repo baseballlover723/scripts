@@ -28,7 +28,7 @@ def expand_paths
   PATHS.each do |path|
     expanded << path and next unless path.end_with?('*') || path.end_with?('*/')
     dir_path = path.gsub('*/', '').gsub('*', '')
-    entries = Dir.entries dir_path, OPTS
+    entries = Dir.entries dir_path, **OPTS
     entries.each do |entry|
       next if entry == '.' || entry == '..' || entry == 'desktop.ini'
       expanded << dir_path + entry + '/'
@@ -69,7 +69,7 @@ def main
 end
 
 def rename_show(path, rename, first_number)
-  entries = Dir.entries path, OPTS
+  entries = Dir.entries path, **OPTS
   count = 0
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini'
@@ -84,7 +84,7 @@ def rename_show(path, rename, first_number)
 end
 
 def rename_season(path, rename, first_number)
-  episodes = Dir.entries path, OPTS
+  episodes = Dir.entries path, **OPTS
   count = 0
   episodes.each do |episode_name|
     next if episode_name == '.' || episode_name == '..' || episode_name == 'desktop.ini'

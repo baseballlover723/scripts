@@ -84,7 +84,7 @@ end
 def add_episode_names(path, episodes_by_season)
   puts path
   has_seasons = false
-  seasons = Dir.entries path, OPTS
+  seasons = Dir.entries path, **OPTS
   seasons.each do |season_str|
     next if season_str == '.' || season_str == '..' || season_str == 'desktop.ini'
     next unless File.directory? path + '/' + season_str

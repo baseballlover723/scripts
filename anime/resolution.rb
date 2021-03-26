@@ -131,11 +131,11 @@ end
 def main
   $cache = Cache.load(CACHE_PATH)
 
-  shows = Dir.entries PATH, OPTS
+  shows = Dir.entries PATH, **OPTS
 
   count = 0
   pool = Concurrent::FixedThreadPool.new(8)
-  watched_shows = Dir.entries PATH + '/zWatched', OPTS
+  watched_shows = Dir.entries PATH + '/zWatched', **OPTS
   watched_shows.each do |show|
     next if show == '.' || show == '..' || show == 'desktop.ini'
     pool.post do
@@ -162,7 +162,7 @@ def analyze_show(show, path)
   anime = RESULTS[show] || Anime.new(show)
   RESULTS[anime.name] = anime
   root_season = Season.new(anime, 'root')
-  entries = Dir.entries "#{path}/#{anime.name}", OPTS
+  entries = Dir.entries "#{path}/#{anime.name}", **OPTS
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
     analyze_show(entry, path + '/' + anime.name) and next if nested_show? entry
@@ -179,7 +179,7 @@ def analyze_show(show, path)
 end
 
 def analyze_season(season, path)
-  entries = Dir.entries "#{path}/#{season.anime.name}/#{season.name}", OPTS
+  entries = Dir.entries "#{path}/#{season.anime.name}/#{season.name}", **OPTS
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
     analyze_episode season, entry, path

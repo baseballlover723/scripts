@@ -172,7 +172,7 @@ def main
 end
 
 def iterate(path, pool)
-  shows = Dir.entries path, OPTS
+  shows = Dir.entries path, **OPTS
   count = 0
   shows.each do |show|
     next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini'
@@ -194,7 +194,7 @@ def directory_size(path)
   raise RuntimeError, "#{path} is not a directory" unless File.directory?(path)
 
   total_size = 0
-  entries = Dir.entries path, OPTS
+  entries = Dir.entries path, **OPTS
   entries.each do |f|
     next if f == '.' || f == '..' || f == 'zWatched' || f == 'desktop.ini'
     f = "#{path}/#{f}"
@@ -208,7 +208,7 @@ def analyze_show(show, path)
   anime = RESULTS[show] || Anime.new(show)
   RESULTS[anime.name] = anime
   root_season = find_season anime, 'root'
-  entries = Dir.entries path, OPTS
+  entries = Dir.entries path, **OPTS
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
     analyze_show(entry, path + '/' + entry) and next if nested_show? entry
@@ -225,7 +225,7 @@ def analyze_show(show, path)
 end
 
 def analyze_season(season, path)
-  entries = Dir.entries path, OPTS
+  entries = Dir.entries path, **OPTS
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
     analyze_episode season, entry, path + '/' + entry

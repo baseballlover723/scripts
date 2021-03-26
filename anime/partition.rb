@@ -67,13 +67,13 @@ class Group
 end
 
 def main
-  shows = Dir.entries PATH, OPTS
+  shows = Dir.entries PATH, **OPTS
   shows.each do |show|
     next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini' || show == 'format.txt'
     calculate_size show
   end
   PATH << '/zWatched'
-  watched_shows = Dir.entries PATH, OPTS
+  watched_shows = Dir.entries PATH, **OPTS
   watched_shows.each do |show|
     next if show == '.' || show == '..' || show == 'desktop.ini'
     calculate_size show
@@ -227,7 +227,7 @@ def directory_size(path)
   raise RuntimeError, "#{path} is not a directory" unless File.directory?(path)
 
   total_size = 0
-  entries = Dir.entries path, OPTS
+  entries = Dir.entries path, **OPTS
   entries.each do |f|
     next if f == '.' || f == '..' || f == 'zWatched' || f == 'desktop.ini'
     # next unless f.include?(File.basename(path))

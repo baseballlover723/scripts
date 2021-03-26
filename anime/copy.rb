@@ -40,7 +40,7 @@ def directory_size(path, string=true)
   raise RuntimeError, "#{path} is not a directory" unless File.directory?(path)
 
   total_size = 0
-  entries = Dir.entries path, OPTS
+  entries = Dir.entries path, **OPTS
   entries.each do |f|
     next if f == '.' || f == '..' || f == 'desktop.ini'
     f = "#{path}/#{f}"
@@ -59,7 +59,7 @@ def main
 end
 
 def iterate(path)
-  shows = Dir.entries SECONDARY_SRC + path, OPTS
+  shows = Dir.entries SECONDARY_SRC + path, **OPTS
   count = 0
 
   shows.each do |show|

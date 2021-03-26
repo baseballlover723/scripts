@@ -106,7 +106,7 @@ class BaseScript
 
   def iterate_shows(path)
     count = 0
-    Dir.foreach path, @opts do |show_name|
+    Dir.foreach path, **@opts do |show_name|
       next if show_name == '.' || show_name == '..' || show_name == 'zWatched' || show_name == 'desktop.ini'
       # next unless show.start_with?
 
@@ -128,7 +128,7 @@ class BaseScript
       analyze_season(root_season, path) if analyze_season?
     end
 
-    Dir.foreach path, @opts do |season_name|
+    Dir.foreach path, **@opts do |season_name|
       next if season_name == '.' || season_name == '..' || season_name == 'desktop.ini' # || season_name.end_with?('.txt')
       season_path = path + '/' + season_name
       next unless File.directory?(season_path)
@@ -140,7 +140,7 @@ class BaseScript
   end
 
   def iterate_episodes(season, path)
-    Dir.foreach path, @opts do |episode_name|
+    Dir.foreach path, **@opts do |episode_name|
       next if episode_name == '.' || episode_name == '..' || episode_name == 'desktop.ini' || episode_name.end_with?('.txt')
       episode_path = path + '/' + episode_name
       next if File.directory? episode_path

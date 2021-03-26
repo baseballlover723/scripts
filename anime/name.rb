@@ -2,7 +2,7 @@ PATH = '/mnt/d/anime'
 OPTS = {encoding: 'UTF-8'}
 
 def iterate(path, f)
-  shows = Dir.entries path, OPTS
+  shows = Dir.entries path, **OPTS
   count = 0
   shows.each do |show|
     next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini'
