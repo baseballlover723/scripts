@@ -39,7 +39,7 @@ def main
 end
 
 def get_episode_names
-  html = HTTParty.get(URL)
+  html = HTTParty.get(URL).body
   parsed = Nokogiri::HTML html
 
   episodes_by_season = {}
@@ -170,6 +170,7 @@ def add_episode_names_to_season(path, episodes, rename)
     filename = filename.gsub('The_mentalist_', 'The Mentalist ')
     filename = filename.gsub('Star Wars The Clone Wars', 'Star Wars; The Clone Wars')
     filename = filename.gsub('(us) ', '')
+    filename = filename.gsub(' - ', '; ')
     # filename = "Doctor Who " + filename[filename.index(/S\d\dE\d\d/)..-1]
 
     episode_number = filename[/E\d+/][/\d+/].to_i
