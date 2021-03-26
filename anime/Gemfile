@@ -4,13 +4,13 @@ source "https://rubygems.org"
 # git_source(:github) {|repo_name| "https://github.com/#{repo_name}" }
 
 gem 'dotenv', '~> 2.7'
-gem 'net-ssh', '~> 5.2'
-gem 'net-scp', '~> 2.0'
-gem 'net-sftp', '~> 2.1'
+gem 'net-ssh', '~> 6.1'
+gem 'net-scp', '~> 3.0'
+gem 'net-sftp', '~> 3.0'
 gem 'colorize', '~> 0.8'
-gem 'activesupport', '~> 5.2'
+gem 'activesupport', '~> 6.1'
 gem 'httparty', '~> 0.17'
-gem 'nokogiri'
+gem 'nokogiri', '~> 1.11.1'
 gem 'highline', '~> 2.0.3'
 gem 'pry'
 gem 'parallel'
