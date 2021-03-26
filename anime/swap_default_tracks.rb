@@ -3,10 +3,10 @@ require 'colorize'
 require 'shellwords'
 
 PATHS = [
-  "/mnt/c/Users/Philip Ross/Downloads/Ghost Hound",
-  # "/mnt/c/Users/Philip Ross/Downloads/Season 3",
-  # "/mnt/g/anime/The Sacred Blacksmith",
-  # "/mnt/d/anime/Tokyo Ghoul/Season 3",
+ # "/mnt/c/Users/Philip Ross/Downloads/Akudama Drive",
+  "/mnt/c/Users/Philip Ross/Downloads/Season 3",
+  # "/mnt/d/anime/Re;ZERO Starting Life in Another World (In Progress)/Season 2 (In Progress)",
+ # "/mnt/f/anime/zWatched/Attack On Titan (In Progress)/Season 3",
 # "/mnt/c/Users/Philip Ross/Downloads/Place to Place",
 # '/mnt/c/Users/Philip Ross/Downloads/Season 2',
 # '/mnt/c/Users/Philip Ross/Downloads/Black Lagoon/Season 2',

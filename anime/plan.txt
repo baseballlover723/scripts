@@ -1,0 +1,15 @@
+Plan to make scripts more maintainable
+Goal: extract out common functionality into seperate files, and reuse it
+
+TODO Create Base script
+    TODO Create Common Base Classes (ShowGroup?, Show, Seasons, Episode)
+    TODO Create Common iteration
+    TODO Create common caching layer (file based? or sqllite based?) (not all scripts use the cache)
+    TODO Hookpoints: analyze episode, trim results, print results, analyze season?, analyze show?
+    TODO Handle comparing scripts, (making multiple iterations kept seperate)
+
+TODO Create Args File (path info and what not) that the scripts read from
+
+
+
+

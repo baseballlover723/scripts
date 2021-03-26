@@ -2,14 +2,14 @@ require 'dotenv/load'
 require 'pty'
 require 'shellwords'
 
-# LOCAL_PATH = '/mnt/d/anime'
-# LOCAL_PATH = '/mnt/d/anime'
-# REMOTE_PATH = '/entertainment/anime'
-LOCAL_PATH = '/mnt/e/movies'
-REMOTE_PATH = '/entertainment/movies'
-# ANIME_NAME = 'The Sacred Blacksmith'
-ANIME_NAME = 'Olympus Has Fallen/Angel Has Fallen (2019) [1080p] {x265}'
-# ANIME_NAME = 'zWatched/Sword Art Online (In Progress)/Season 1'
+LOCAL_PATH = '/mnt/d/anime'
+# LOCAL_PATH = '/mnt/d/anime/zWatched'
+REMOTE_PATH = '/entertainment/anime/_batch4'
+# LOCAL_PATH = '/mnt/e/movies'
+# REMOTE_PATH = '/entertainment/movies'
+ANIME_NAME = "Re;ZERO Starting Life in Another World (In Progress)/Season 2 (In Progress)"
+# ANIME_NAME = 'Olympus Has Fallen/Angel Has Fallen (2019) [1080p] {x265}'
+# ANIME_NAME = 'Log Horizon'
 OPTS = {encoding: 'UTF-8'}
 
 OPTIONS = "-aPv -e 'ssh -p 666' --timeout 10 --protect-args"

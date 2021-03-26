@@ -3,7 +3,8 @@ require 'colorize'
 require 'active_support'
 require 'active_support/number_helper'
 
-PATH = '/mnt/g/anime'
+PATH = '/mnt/d/anime'
+# PATH = '/mnt/g/anime'
 # PATH = '/entertainment/tv'
 OPTS = {encoding: 'UTF-8'}
 SHOWS = {}
@@ -78,6 +79,7 @@ def calculate_size(show)
   end
 end
 
+start = Time.now
 main
 RESULTS.sort_by(&:name)
 File.open('./anime.log', 'w') do |file|
@@ -85,13 +87,13 @@ File.open('./anime.log', 'w') do |file|
     file.puts(anime.name)
   end
 end
-RESULTS.sort_by!(&:bytes).reverse!
-# RESULTS.sort_by!(&:name)
+# RESULTS.sort_by!(&:bytes).reverse!
+RESULTS.sort_by!(&:name)
 print "\r".ljust(120)
 print "\r"
 total = 0
 RESULTS.each do |result|
-  next if result.bytes < 1024 * 1024 * 1024 * 20
+  next if result.bytes < 1024 * 1024 * 1024 * 25
   # next if result.name.include? 'x265'
   # next if result.name.include? '1080p'
   puts result unless result.bytes == 0
@@ -99,3 +101,5 @@ RESULTS.each do |result|
 end
 a = Anime.new('total', total)
 puts a
+puts "Took #{Time.now - start} seconds"
+

@@ -15,11 +15,11 @@ end
 
 # Only works for movies
 REMOTE = !ARGV.empty?
-# LOCAL_PATH = '/mnt/e/movies'
-LOCAL_PATH = '/mnt/h/tv'
+LOCAL_PATH = '/mnt/e/movies'
+# LOCAL_PATH = '/mnt/h/tv'
 # LOCAL_PATH = "/mnt/c/Users/Philip Ross/Downloads/ryan/empty_movies"
-# REMOTE_PATH = '/notanime/ryan/movies/Movies/'
-REMOTE_PATH = '/notanime/ryan/tv/TV Shows/'
+REMOTE_PATH = '/notanime/ryan/movies/Movies/'
+# REMOTE_PATH = '/notanime/ryan/tv/TV Shows/'
 REMOTE_LOCAL_PATH = '/mnt/c/Users/Philip Ross/Downloads/ryan/empty_movies' # debug
 
 REMOTE_RESULTS = []
@@ -112,7 +112,7 @@ def print_similarity(result)
   max_name_length = [result[:local][:name].size, result[:remote][:name].size].max
   local = (result[:local][:name].ljust(max_name_length) + ' | ' + result[:local][:relative_path]).light_cyan
   remote = (result[:remote][:name].ljust(max_name_length) + ' | ' + result[:remote][:relative_path]).light_red
-  similarity = sprintf("%05.2f%", result[:similarity]).light_magenta
+  similarity = sprintf("%05.2f%%", result[:similarity]).light_magenta
   # puts result
   puts local
   puts remote

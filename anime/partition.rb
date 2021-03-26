@@ -11,8 +11,10 @@ SHOWS = {}
 RESULTS = []
 
 PARTITION_SIZE = 1300 * 1024 * 1024 * 1024
+# PARTITION_SIZE = 1400 * 1000 * 1000 * 1000
 # PARTITION_SIZE = 1500 * 1024 * 1024 * 1024
-BUFFER_SIZE = 55 * 1024 * 1024 * 1024
+# BUFFER_SIZE = 55 * 1024 * 1024 * 1024
+BUFFER_SIZE = 50 * 1024 * 1024 * 1024
 TRANSFER_SIZE = PARTITION_SIZE - BUFFER_SIZE
 OTHER_FILES_SIZE = 325 * 1024 * 1024 * 1024
 
@@ -81,8 +83,6 @@ def main
   print "\r".ljust(120)
   print "\r"
 
-  # buffer_size = BUFFER_SIZE
-  # transfer_size = TRANSFER_SIZE
   # plus_minus = 20
   #
   # buffer_sizes = (-plus_minus..plus_minus).map do |buffer_adjustment|
@@ -99,6 +99,11 @@ def main
 
   calculate_groups(RESULTS.clone, PARTITION_SIZE, BUFFER_SIZE, TRANSFER_SIZE, OTHER_FILES_SIZE)
 end
+
+# INDEXES = [0,1,2]
+# INDEXES = [1,2,3]
+# INDEXES = [2,3,4]
+# INDEXES = [3,4,5]
 
 def calculate_groups(animes, partition_size, buffer_size, transfer_size, other_files_size)
   animes.unshift(Anime.new('other files', other_files_size))
@@ -137,20 +142,24 @@ def calculate_groups(animes, partition_size, buffer_size, transfer_size, other_f
   puts
 
   # puts "\nRight Weighted Groups\n\n"
-  # transfer_left_to_right(groups[0], groups[1])
+  # transfer_left_to_right(groups[INDEXES[0]], groups[INDEXES[1]])
+  # transfer_left_to_right(groups[INDEXES[1]], groups[INDEXES[2]])
   # groups.each do |group|
   #   puts group
   # end
   # puts "std_deviation: #{human_size standard_deviation(groups)}"
-  # transfer_right_to_left(groups[0], groups[1])
+  # transfer_right_to_left(groups[INDEXES[1]], groups[INDEXES[2]])
+  # transfer_right_to_left(groups[INDEXES[0]], groups[INDEXES[1]])
   #
   # puts "\nLeft Weighted Groups\n\n"
-  # transfer_right_to_left(groups[0], groups[1])
+  # transfer_right_to_left(groups[INDEXES[INDEXES[0]]], groups[INDEXES[1]])
+  # transfer_right_to_left(groups[INDEXES[1]], groups[INDEXES[2]])
   # groups.each do |group|
   #   puts group
   # end
   # puts "std_deviation: #{human_size standard_deviation(groups)}"
-  # transfer_left_to_right(groups[0], groups[1])
+  # transfer_left_to_right(groups[INDEXES[1]], groups[INDEXES[2]])
+  # transfer_left_to_right(groups[INDEXES[0]], groups[INDEXES[1]])
   standard_deviation(groups)
 end
 

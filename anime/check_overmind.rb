@@ -6,7 +6,8 @@ LONG_EXTERNAL_PATH = '/mnt/f/anime'
 # EXTERNAL_PATH = '/mnt/c/Users/Philip Ross/Downloads/test/external'
 # LONG_EXTERNAL_PATH = '/mnt/c/Users/Philip Ross/Downloads/test/long_external'
 TEMP_PATH = '/mnt/e/anime'
-REMOTE_PATH = '../../entertainment/anime'
+# REMOTE_PATH = '../../entertainment/anime'
+REMOTE_PATHES = ['../../entertainment/anime/_batch1', '../../entertainment/anime/_batch2', '../../entertainment/anime/_batch3', '../../entertainment/anime/_batch4', '../../entertainment/anime/_batch5']
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 HIDE_LOCAL_ONLY = false
@@ -223,6 +224,7 @@ def main
         begin
           RESULTS.replace Marshal::load(serialized_results)
         rescue TypeError => e
+          $included.delete? 'remote' # debug?
           puts 'Error reading results from remote'
           puts serialized_results
         end
@@ -310,7 +312,10 @@ def nested_show?(show)
 end
 
 def remote_main
-  iterate(REMOTE_PATH, 'remote')
+  REMOTE_PATHES.each do |rp|
+    iterate(rp, 'remote')
+  end
+  # iterate(REMOTE_PATH, 'remote')
   puts Marshal::dump(RESULTS)
 end
 
@@ -432,7 +437,8 @@ def print_results
     transfer_amount = local
     transfer = ActiveSupport::NumberHelper.number_to_human_size(transfer_amount, {precision: 5, strip_insignificant_zeros: false})
     # kilobytes_per_sec = 1400
-    kilobytes_per_sec = 1200
+    # kilobytes_per_sec = 1200
+    kilobytes_per_sec = 1024
     est = (transfer_amount) / (1024 * kilobytes_per_sec)
     puts "Need to transfer #{transfer.light_cyan}: EST: #{to_human_duration(est).light_cyan} (#{kilobytes_per_sec} KB/s)"
   end

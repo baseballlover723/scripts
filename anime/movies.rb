@@ -23,7 +23,7 @@ if ARGV.empty?
   require 'active_support/core_ext/string/indent'
 
   $included = Set.new
-  $included << 'remote'
+  # $included << 'remote'
   $included << 'local' if File.directory? LOCAL_PATHES.values.first
   $included << 'external' if File.directory? EXTERNAL_PATHES.values.first
   puts 'skipping overmind' unless $included.include? 'remote'

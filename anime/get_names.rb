@@ -4,13 +4,13 @@ require 'nokogiri'
 require 'highline/import'
 require 'pry'
 require 'resolv-replace'
-# URL = "https://en.wikipedia.org/wiki/List_of_Game_of_Thrones_episodes"
-# URL = "https://en.wikipedia.org/wiki/The_Planets_(2019_TV_series)"
-URL = "https://en.wikipedia.org/wiki/List_of_Fresh_Off_the_Boat_episodes"
+# URL = "https://en.wikipedia.org/wiki/List_of_Better_Call_Saul_episodes"
+URL = "https://en.wikipedia.org/wiki/A_Perfect_Planet"
+# URL = "https://en.wikipedia.org/wiki/List_of_Orange_Is_the_New_Black_episodes"
 # URL = "https://en.wikipedia.org/wiki/List_of_South_Park_episodes"
 # URL = "https://en.wikipedia.org/wiki/Mars_(2016_TV_series)#Episodes"
-PATH = "/mnt/c/Users/Philip Ross/Downloads/f"
-# PATH = "/mnt/c/Users/Philip Ross/Downloads/gen;LOCK [1080p] {x265}/"
+#  PATH = "/mnt/c/Users/Philip Ross/Downloads/s"
+PATH = "/mnt/c/Users/Philip Ross/Downloads/A Perfect Planet (2020) [2160p] {x265}/"
 # PATH = "/mnt/h/tv/Star Wars; The Clone Wars [1080p] {x265}/"
 # PATH = "/entertainment/tv/South Park [1080p] {x265}/"
 PATH << '/' unless PATH.end_with? '/'

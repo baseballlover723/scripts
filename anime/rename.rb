@@ -3,14 +3,14 @@ require 'colorize'
 
 PATHS = [
   # '/mnt/c/Users/Philip Ross/Downloads/b',
-  "/mnt/c/Users/Philip Ross/Downloads/Ghost Hound",
-  # "/mnt/c/Users/Philip Ross/Downloads/Season 1",
-  # "/mnt/c/Users/Philip Ross/Downloads/Season 2",
+  #  "/mnt/c/Users/Philip Ross/Downloads/Akudama Drive",
+  "/mnt/c/Users/Philip Ross/Downloads/Season 3",
+  # "/mnt/c/Users/Philip Ross/Downloads/Season 5",
   # '/mnt/c/Users/Philip Ross/Downloads/Black Lagoon/Season 2',
   # '/mnt/c/Users/Philip Ross/Downloads/Black Lagoon/Season 3',
-# '/mnt/c/Users/Philip Ross/Downloads/Accel World',
-#   "/mnt/f/anime/Attack On Titan (In Progress)/Season 3 (In Progress)",
-#   "/entertainment/anime/Attack On Titan (In Progress)/Season 3 (In Progress)",
+  # '/mnt/c/Users/Philip Ross/Downloads/Accel World',
+  #   "/mnt/g/anime/Bungo Stray Dogs/Season 2",
+  #   "/entertainment/anime/Sword Art Online/Season 4",
 ]
 PATHS.each { |p| p << '/' unless p.end_with? '/' }
 OPTS = {encoding: 'UTF-8'}
