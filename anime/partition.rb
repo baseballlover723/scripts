@@ -19,6 +19,14 @@ BUFFER_SIZE = 50 * 1024 * 1024 * 1024
 TRANSFER_SIZE = PARTITION_SIZE - BUFFER_SIZE
 OTHER_FILES_SIZE = 325 * 1024 * 1024 * 1024
 
+module ActiveSupport
+  module NumberHelper
+    class NumberToHumanSizeConverter < NumberConverter #:nodoc:
+      STORAGE_UNITS = [:byte, :kb, :mb, :gb]
+    end
+  end
+end
+
 class Anime
   attr_accessor :name, :bytes
 
