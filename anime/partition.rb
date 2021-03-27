@@ -11,6 +11,7 @@ SHOWS = {}
 RESULTS = []
 
 PARTITION_SIZE = 1300 * 1024 * 1024 * 1024
+# PARTITION_SIZE = 1250 * 1024 * 1024 * 1024
 # PARTITION_SIZE = 1400 * 1000 * 1000 * 1000
 # PARTITION_SIZE = 1500 * 1024 * 1024 * 1024
 # BUFFER_SIZE = 55 * 1024 * 1024 * 1024
@@ -100,11 +101,6 @@ def main
   calculate_groups(RESULTS.clone, PARTITION_SIZE, BUFFER_SIZE, TRANSFER_SIZE, OTHER_FILES_SIZE)
 end
 
-# INDEXES = [0,1,2]
-# INDEXES = [1,2,3]
-# INDEXES = [2,3,4]
-# INDEXES = [3,4,5]
-
 def calculate_groups(animes, partition_size, buffer_size, transfer_size, other_files_size)
   animes.unshift(Anime.new('other files', other_files_size))
   total_size = animes.sum(&:bytes)
@@ -166,37 +162,52 @@ end
 def balance_groups(groups)
   loop do
     made_changes = false
-    groups.each_cons(2) do |group1, group2|
-      made_changes ||= balance_left_to_right(groups, group1, group2)
-      made_changes ||= balance_right_to_left(groups, group1, group2)
+    combinations(groups) do |range|
+      made_changes ||= balance_left_to_right(groups, range)
+      made_changes ||= balance_right_to_left(groups, range)
     end
     return groups unless made_changes
   end
+end
+
+# yields to each combination of group index, sorted by difference so that it does the smallest ranges first.
+# ex: [0..1, 1..2, 2..3, 0..2, 1..3, 0..4]
+def combinations(groups)
+  (0...groups.size)
+    .to_a
+    .combination(2)
+    .to_a
+    .sort { |a, b| (a.last - a.first) - (b.last - b.first) }
+    .map { |s, f| yield s..f }
 end
 
 def human_size(n)
   ActiveSupport::NumberHelper.number_to_human_size(n, { precision: 5, strip_insignificant_zeros: false })
 end
 
-def balance_left_to_right(groups, group1, group2)
-  omnibalance(groups, group1, group2, ->(l, r) { transfer_left_to_right(l, r) }, ->(l, r) { transfer_right_to_left(l, r) })
+def balance_left_to_right(groups, range)
+  omnibalance(groups, range, ->(l, r) { transfer_left_to_right(l, r) }, ->(l, r) { transfer_right_to_left(l, r) })
 end
 
-def balance_right_to_left(groups, group1, group2)
-  omnibalance(groups, group1, group2, ->(l, r) { transfer_right_to_left(l, r) }, ->(l, r) { transfer_left_to_right(l, r) })
+def balance_right_to_left(groups, range)
+  omnibalance(groups, range, ->(l, r) { transfer_right_to_left(l, r) }, ->(l, r) { transfer_left_to_right(l, r) })
 end
 
-def omnibalance(groups, group1, group2, forwards, backwards)
+def omnibalance(groups, range, forwards, backwards)
   made_changes = false
   current = standard_deviation(groups)
 
   loop do
-    forwards.call(group1, group2)
+    range.each_cons(2) do |start_index, end_index|
+      forwards.call(groups[start_index], groups[end_index])
+    end
     prev = current
     current = standard_deviation(groups)
-    # puts "\nprev: #{human_size prev}, current: #{human_size current}"
+    # puts "\nprev: #{human_size prev}, current: #{human_size current}" # debug
     if (current > prev)
-      backwards.call(group1, group2)
+      range.each_cons(2) do |start_index, end_index|
+        backwards.call(groups[start_index], groups[end_index])
+      end
       return made_changes
     end
     made_changes = true
@@ -205,13 +216,13 @@ end
 
 def transfer_left_to_right(group1, group2)
   anime = group1.animes.pop
-  # puts "moving #{anime.name} from group ##{group1.number} to group ##{group2.number}".light_green
+  # puts "moving #{anime.name} from group ##{group1.number} to group ##{group2.number}".light_green # debug
   group2.animes.unshift(anime)
 end
 
 def transfer_right_to_left(group1, group2)
   anime = group2.animes.shift
-  # puts "moving #{anime.name} from group ##{group2.number} to group ##{group1.number}".light_red
+  # puts "moving #{anime.name} from group ##{group2.number} to group ##{group1.number}".light_red # debug
   group1.animes << anime
 end
 
