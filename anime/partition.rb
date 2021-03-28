@@ -19,6 +19,8 @@ BUFFER_SIZE = 50 * 1024 * 1024 * 1024
 TRANSFER_SIZE = PARTITION_SIZE - BUFFER_SIZE
 OTHER_FILES_SIZE = 325 * 1024 * 1024 * 1024
 
+original_verbosity = $VERBOSE
+$VERBOSE = nil
 module ActiveSupport
   module NumberHelper
     class NumberToHumanSizeConverter < NumberConverter #:nodoc:
@@ -26,6 +28,7 @@ module ActiveSupport
     end
   end
 end
+$VERBOSE = original_verbosity
 
 class Anime
   attr_accessor :name, :bytes
