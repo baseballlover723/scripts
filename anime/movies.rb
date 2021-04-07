@@ -257,60 +257,72 @@ def iterate(path, location, type)
 end
 
 def analyze_show_group(name, path, location, type)
-  show_group = find_show_group name, type
-  if show_group.ignore?
-    analyze_show show_group, name, path, location, type
-    return
-  end
+  begin
+    show_group = find_show_group name, type
+    if show_group.ignore?
+      analyze_show show_group, name, path, location, type
+      return
+    end
 
-  entries = Dir.entries path, **OPTS
-  entries.each do |entry|
-    next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-    analyze_show show_group, entry, path + '/' + entry, location, type
+    entries = Dir.entries path, **OPTS
+    entries.each do |entry|
+      next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
+      analyze_show show_group, entry, path + '/' + entry, location, type
+    end
+  rescue Errno::EACCES => _
   end
 end
 
 def analyze_show(show_group, show_name, path, location, type)
-  # iterate(path, location, type) if nested_folder? show_name
-  # (analyze_show_group(show_name, path, location, type); return) if show_group? show_name
-  show = find_show(show_group, show_name)
-  root_season = find_season show, 'root'
-  entries = Dir.entries path, **OPTS
-  entries.sort.each do |entry|
-    next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-    if File.directory?("#{path}/#{entry}")
-      analyze_season find_season(show, entry), path + '/' + entry, location
-    else
-      analyze_episode root_season, entry, path + '/' + entry, location
+  begin
+    # iterate(path, location, type) if nested_folder? show_name
+    # (analyze_show_group(show_name, path, location, type); return) if show_group? show_name
+    show = find_show(show_group, show_name)
+    root_season = find_season show, 'root'
+    entries = Dir.entries path, **OPTS
+    entries.sort.each do |entry|
+      next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
+      if File.directory?("#{path}/#{entry}")
+        analyze_season find_season(show, entry), path + '/' + entry, location
+      else
+        analyze_episode root_season, entry, path + '/' + entry, location
+      end
     end
-  end
-  if root_season.episodes.empty?
-    show.seasons.delete(root_season.name)
+    if root_season.episodes.empty?
+      show.seasons.delete(root_season.name)
+    end
+  rescue Errno::EACCES => _
   end
 end
 
 def analyze_season(season, path, location)
-  entries = Dir.entries path, **OPTS
-  entries.sort.each do |entry|
-    next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-    analyze_episode season, entry, path + '/' + entry, location
+  begin
+    entries = Dir.entries path, **OPTS
+    entries.sort.each do |entry|
+      next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
+      analyze_episode season, entry, path + '/' + entry, location
+    end
+  rescue Errno::EACCES => _
   end
 end
 
 def analyze_episode(season, episode_name, path, location)
-  if File.directory?(path)
-    file_size = directory_size(path)
-  else
-    file_size = File.size(path)
-    if (file_size == 0) # so
-      file_size = 1
+  begin
+    if File.directory?(path)
+      file_size = directory_size(path)
+    else
+      file_size = File.size(path)
+      if (file_size == 0) # so
+        file_size = 1
+      end
     end
+    episode_name.chomp!('.filepart')
+    episode_name.chomp!('.crdownload')
+    # return unless episode_name.end_with? *MOVIE_EXTENSIONS
+    episode = find_episode season, episode_name
+    episode.send(location + '_size=', file_size)
+  rescue Errno::EACCES => _
   end
-  episode_name.chomp!('.filepart')
-  episode_name.chomp!('.crdownload')
-  # return unless episode_name.end_with? *MOVIE_EXTENSIONS
-  episode = find_episode season, episode_name
-  episode.send(location + '_size=', file_size)
 end
 
 def directory_size(path)
@@ -384,7 +396,6 @@ def trim_results
       end
     end
   end
-
 
   # puts shows.size
   # puts shows.class
@@ -501,7 +512,7 @@ class Season
       puts name.indent $indent_size unless name == 'root'
       indent(4) do
         str = ''
-        episodes = @episodes.values.sort_by {|e| e.name.to_f == 0 ? 9999 : e.name.to_f}
+        episodes = @episodes.values.sort_by { |e| e.name.to_f == 0 ? 9999 : e.name.to_f }
         episodes.each do |episode|
           episode_str = episode.to_s
           if (str + "#{episode_str}, ").uncolorize.length + $indent_size < $cols

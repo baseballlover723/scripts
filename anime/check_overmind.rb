@@ -265,45 +265,54 @@ def iterate(path, type)
 end
 
 def analyze_show(show, path, type)
-  anime = RESULTS[show] || Anime.new(show)
-  RESULTS[anime.name] = anime
-  root_season = find_season anime, 'root'
-  entries = Dir.entries path, **OPTS
-  entries.each do |entry|
-    next if entry == '.' || entry == '..' || entry == 'desktop.ini' # || entry.end_with?('.txt')
-    analyze_show(entry, path + '/' + entry, type) and next if nested_show? entry
-    if File.directory?("#{path}/#{entry}")
-      analyze_season find_season(anime, entry), path + '/' + entry, type
-    else
-      analyze_episode root_season, entry, path + '/' + entry, type
+  begin
+    anime = RESULTS[show] || Anime.new(show)
+    RESULTS[anime.name] = anime
+    root_season = find_season anime, 'root'
+    entries = Dir.entries path, **OPTS
+    entries.each do |entry|
+      next if entry == '.' || entry == '..' || entry == 'desktop.ini' # || entry.end_with?('.txt')
+      analyze_show(entry, path + '/' + entry, type) and next if nested_show? entry
+      if File.directory?("#{path}/#{entry}")
+        analyze_season find_season(anime, entry), path + '/' + entry, type
+      else
+        analyze_episode root_season, entry, path + '/' + entry, type
+      end
     end
-  end
-  if root_season.episodes.empty?
-    anime.seasons.delete(root_season.name)
+    if root_season.episodes.empty?
+      anime.seasons.delete(root_season.name)
+    end
+  rescue Errno::EACCES => _
   end
 end
 
 def analyze_season(season, path, type)
-  entries = Dir.entries path, **OPTS
-  entries.each do |entry|
-    next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-    analyze_episode season, entry, path + '/' + entry, type
+  begin
+    entries = Dir.entries path, **OPTS
+    entries.each do |entry|
+      next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
+      analyze_episode season, entry, path + '/' + entry, type
+    end
+  rescue Errno::EACCES => _
   end
 end
 
 def analyze_episode(season, episode_name, path, type)
-  return if File.directory? path
-  file_size = File.size(path)
-  if (file_size == 0) # so
-    file_size = 1
-  else
-    episode_name.chomp!('.filepart')
-    episode_name.chomp!('.crdownload')
-    episode_name.chomp! '.mp4'
-    episode_name.chomp! '.mkv'
+  begin
+    return if File.directory? path
+    file_size = File.size(path)
+    if (file_size == 0) # so
+      file_size = 1
+    else
+      episode_name.chomp!('.filepart')
+      episode_name.chomp!('.crdownload')
+      episode_name.chomp! '.mp4'
+      episode_name.chomp! '.mkv'
+    end
+    episode = find_episode season, episode_name
+    episode.send(type + '_size=', file_size)
+  rescue Errno::EACCES => _
   end
-  episode = find_episode season, episode_name
-  episode.send(type + '_size=', file_size)
 end
 
 def nested_show?(show)
@@ -405,7 +414,7 @@ def print_results
       puts season.name.indent 4 unless season.name == 'root'
       indent_size = season.name == 'root' ? 4 : 8
       str = ''
-      episodes = season.episodes.values.sort_by {|e| e.name.to_f == 0 ? 9999 : e.name.to_f}
+      episodes = season.episodes.values.sort_by { |e| e.name.to_f == 0 ? 9999 : e.name.to_f }
       episodes.each do |episode|
         episode_str = episode.to_s
         if (str + "#{episode_str}, ").uncolorize.length + indent_size < cols
