@@ -6,8 +6,7 @@ LONG_EXTERNAL_PATH = '/mnt/f/anime'
 # EXTERNAL_PATH = '/mnt/c/Users/Philip Ross/Downloads/test/external'
 # LONG_EXTERNAL_PATH = '/mnt/c/Users/Philip Ross/Downloads/test/long_external'
 TEMP_PATH = '/mnt/e/anime'
-# REMOTE_PATH = '../../entertainment/anime'
-REMOTE_PATHES = ['../../entertainment/anime/_batch1', '../../entertainment/anime/_batch2', '../../entertainment/anime/_batch3', '../../entertainment/anime/_batch4', '../../entertainment/anime/_batch5']
+REMOTE_PATHS = ['../../entertainment/anime']
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 HIDE_LOCAL_ONLY = false
@@ -321,10 +320,9 @@ def nested_show?(show)
 end
 
 def remote_main
-  REMOTE_PATHES.each do |rp|
-    iterate(rp, 'remote')
+  REMOTE_PATHS.each do |rp|
+    iterate(rp, 'remote') if File.exist?(rp)
   end
-  # iterate(REMOTE_PATH, 'remote')
   puts Marshal::dump(RESULTS)
 end
 
