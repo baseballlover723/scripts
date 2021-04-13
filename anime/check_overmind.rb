@@ -404,7 +404,7 @@ end
 def analyze_episode(season, episode_name, path, type)
   begin
     return if File.directory? path
-    print "\rcalculating checksum for #{path}".truncate($terminal_size[:width]).ljust($terminal_size[:width]) if ARGV.empty?
+    print "\rcalculating checksum for #{path}".truncate($terminal_size[:width] + 1).ljust($terminal_size[:width] + 1) if ARGV.empty?
     data, _cached = $cache.get(path) do
       if Time.now - $cache.last_write_time > CACHE_REFRESH
         $cache.write(CACHE_PATH)
