@@ -1,4 +1,5 @@
 require 'digest'
+require_relative './cache'
 
 REMOTE = !ARGV.empty?
 LOCAL_PATH = '/mnt/d/anime'
@@ -8,11 +9,13 @@ LONG_EXTERNAL_PATH = '/mnt/f/anime'
 # EXTERNAL_PATH = '/mnt/c/Users/Philip Ross/Downloads/test/external'
 # LONG_EXTERNAL_PATH = '/mnt/c/Users/Philip Ross/Downloads/test/long_external'
 TEMP_PATH = '/mnt/e/anime'
-REMOTE_PATHS = ['../../entertainment/anime']
+REMOTE_PATHS = ['/entertainment/anime']
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 HIDE_LOCAL_ONLY = false
 # TODO hide_local_only make extensible so it dosen't only depend on local and remote
+CACHE_PATH = 'check_overminds.cache.json'
+CACHE_REFRESH = 30
 DIGEST_ALGO = Digest::SHA256
 
 if ARGV.empty?
@@ -250,13 +253,62 @@ class Episode
   end
 end
 
+class Cache < BaseCache
+  def initialize(cache)
+    super(cache)
+  end
+
+  def self.load_episode(path, last_modified, payload)
+    CacheEpisode.new(path, last_modified, payload)
+  end
+
+  def write(path = CACHE_PATH)
+    super(path)
+  end
+end
+
+CHECKSUM_KEY = 'checksum'.freeze
+SIZE_KEY = 'size'.freeze
+
+class CacheEpisode < BaseCachePayload
+
+  def initialize(path, last_modified, payload)
+    super(path, last_modified, payload)
+  end
+
+  def checksum
+    payload[CHECKSUM_KEY]
+  end
+
+  def checksum=(checksum)
+    payload[CHECKSUM_KEY] = checksum
+  end
+
+  def size
+    payload[SIZE_KEY]
+  end
+
+  def size=(size)
+    payload[SIZE_KEY] = size
+  end
+
+  def as_json(options = {})
+    hash = super(options)
+    hash[:checksum] = checksum
+    hash[:size] = size
+    hash
+  end
+end
+
 def main
   puts Time.now
+  $cache = Cache.load(CACHE_PATH)
   if $included.include? 'remote'
     begin
       Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
         ssh.sftp.connect do |sftp|
           sftp.upload!(__FILE__, "remote.rb")
+          sftp.upload!("cache.rb", "cache.rb")
         end
         puts 'running on remote'
         serialized_results = ssh.exec! "source load_rbenv && ruby remote.rb remote"
@@ -268,6 +320,7 @@ def main
           puts serialized_results
         end
         ssh.exec! "rm remote.rb"
+        ssh.exec! "rm cache.rb"
       end
     rescue Errno::EAGAIN => e
       puts 'could not connect to overmind'
@@ -278,17 +331,23 @@ def main
     puts 'running locally'
     iterate LOCAL_PATH, 'local'
     iterate LOCAL_PATH + '/zWatched', 'local'
+    puts
   end
+  $cache.write(CACHE_PATH)
   if $included.include? 'external'
     puts 'running on external'
     iterate EXTERNAL_PATH, 'external'
     iterate EXTERNAL_PATH + '/zWatched', 'external'
+    puts
   end
+  $cache.write(CACHE_PATH)
   if $included.include? 'long_external'
     puts 'running on long external'
     iterate LONG_EXTERNAL_PATH, 'long_external'
     iterate LONG_EXTERNAL_PATH + '/zWatched', 'long_external'
+    puts
   end
+  $cache.write(CACHE_PATH)
 end
 
 def iterate(path, type)
@@ -341,18 +400,25 @@ def analyze_episode(season, episode_name, path, type)
   begin
     return if File.directory? path
     print "\rcalculating size for #{path}".ljust(120) if ARGV.empty?
-    file_size = File.size(path)
-    if (file_size == 0) # so
-      file_size = 1
-    else
-      episode_name.chomp!('.filepart')
-      episode_name.chomp!('.crdownload')
-      episode_name.chomp! '.mp4'
-      episode_name.chomp! '.mkv'
+    data, _cached = $cache.get(path) do
+      if Time.now - $cache.last_write_time > CACHE_REFRESH
+        $cache.write(CACHE_PATH)
+      end
+      file_size = File.size(path)
+      if (file_size == 0) # so
+        file_size = 1
+      else
+        episode_name.chomp!('.filepart')
+        episode_name.chomp!('.crdownload')
+        episode_name.chomp! '.mp4'
+        episode_name.chomp! '.mkv'
+      end
+      {CHECKSUM_KEY => DIGEST_ALGO.file(path).to_s, SIZE_KEY => file_size}
     end
+
     episode = find_episode season, episode_name
-    episode.send(type + '_size=', file_size)
-    episode.send(type + '_checksum=', DIGEST_ALGO.file(path).to_s)
+    episode.send(type + '_size=', data[SIZE_KEY])
+    episode.send(type + '_checksum=', data[CHECKSUM_KEY])
   rescue Errno::EACCES => _
   end
 end
@@ -363,8 +429,10 @@ def nested_show?(show)
 end
 
 def remote_main
+  $cache = Cache.load(CACHE_PATH)
   REMOTE_PATHS.each do |rp|
     iterate(rp, 'remote') if File.exist?(rp)
+    $cache.write(CACHE_PATH)
   end
   puts Marshal::dump(RESULTS)
 end
