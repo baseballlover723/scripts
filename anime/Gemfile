@@ -21,4 +21,4 @@ gem 'concurrent-ruby', '~> 1.1'
 gem 'concurrent-ruby-ext', '~> 1.1'
 gem 'json', '~> 2.5'
 gem 'terminal-size', '~> 0.0.6'
-
+gem 'tty-cursor', '~> 0.7.1'

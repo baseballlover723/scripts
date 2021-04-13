@@ -17,6 +17,8 @@ HIDE_LOCAL_ONLY = false
 CACHE_PATH = 'check_overminds.cache.json'
 CACHE_REFRESH = 30
 DIGEST_ALGO = Digest::SHA256
+ANIME_SEMAPHORE = Mutex.new
+PRINT_SEMAPHORE = Mutex.new
 
 if ARGV.empty?
   require 'dotenv/load'
@@ -28,9 +30,11 @@ if ARGV.empty?
   require 'active_support/core_ext/string/indent'
   require 'active_support/core_ext/string/filters'
   require 'terminal-size'
+  require 'tty-cursor'
 
   $terminal_size = Terminal.size
   Signal.trap('SIGWINCH', proc { $terminal_size = Terminal.size })
+  $cursor = TTY::Cursor
 
   $included = Set.new
   $included << 'local'
@@ -41,6 +45,8 @@ if ARGV.empty?
   puts 'skipping external' unless $included.include? 'external'
 
   abort("overmind or an external hard drive need to be connected to work") unless ($included.size > 1)
+
+  $updating_lines = $included.dup.delete('remote').size
 end
 
 class String
@@ -332,30 +338,42 @@ def main
       $included.delete('remote')
     end
   end
+
+  threads = []
+  Thread.abort_on_exception = true
+
+  puts
   if $included.include? 'local'
     puts 'running locally'
-    iterate LOCAL_PATH, 'local'
-    iterate LOCAL_PATH + '/zWatched', 'local'
-    puts
+    threads << Thread.new do
+      iterate LOCAL_PATH + '/zWatched', 'local', 0
+      iterate LOCAL_PATH, 'local', 0
+      $cache.write(CACHE_PATH)
+      print_updating("done running local", 0)
+    end
   end
-  $cache.write(CACHE_PATH)
   if $included.include? 'external'
     puts 'running on external'
-    iterate EXTERNAL_PATH, 'external'
-    iterate EXTERNAL_PATH + '/zWatched', 'external'
-    puts
+    threads << Thread.new do
+      iterate EXTERNAL_PATH + '/zWatched', 'external', 1
+      iterate EXTERNAL_PATH, 'external', 1
+      $cache.write(CACHE_PATH)
+      print_updating("done running external", 1)
+    end
   end
-  $cache.write(CACHE_PATH)
   if $included.include? 'long_external'
     puts 'running on long external'
-    iterate LONG_EXTERNAL_PATH, 'long_external'
-    iterate LONG_EXTERNAL_PATH + '/zWatched', 'long_external'
-    puts
+    threads << Thread.new do
+      iterate LONG_EXTERNAL_PATH + '/zWatched', 'long_external', 2
+      iterate LONG_EXTERNAL_PATH, 'long_external', 2
+      $cache.write(CACHE_PATH)
+      print_updating("done running long_external", 2)
+    end
   end
-  $cache.write(CACHE_PATH)
+  threads.each { |thread| thread.join }
 end
 
-def iterate(path, type)
+def iterate(path, type, line = 0)
   shows = Dir.entries path, **OPTS
   count = 0
   shows.each do |show|
@@ -364,23 +382,25 @@ def iterate(path, type)
     # break if count > 5 # DEBUG
     # next unless show < "A"
     # next unless show.start_with?('A Silent')
-    analyze_show show, path + '/' + show, type
+    analyze_show show, path + '/' + show, type, line
   end
 end
 
-def analyze_show(show, path, type)
+def analyze_show(show, path, type, line)
   begin
-    anime = RESULTS[show] || Anime.new(show)
-    RESULTS[anime.name] = anime
+    anime = ANIME_SEMAPHORE.synchronize do
+      anime = RESULTS[show] || Anime.new(show)
+      RESULTS[anime.name] = anime
+    end
     root_season = find_season anime, 'root'
     entries = Dir.entries path, **OPTS
     entries.each do |entry|
       next if entry == '.' || entry == '..' || entry == 'desktop.ini' # || entry.end_with?('.txt')
-      analyze_show(entry, path + '/' + entry, type) and next if nested_show? entry
+      analyze_show(entry, path + '/' + entry, type, line) and next if nested_show? entry
       if File.directory?("#{path}/#{entry}")
-        analyze_season find_season(anime, entry), path + '/' + entry, type
+        analyze_season find_season(anime, entry), path + '/' + entry, type, line
       else
-        analyze_episode root_season, entry, path + '/' + entry, type
+        analyze_episode root_season, entry, path + '/' + entry, type, line
       end
     end
     if root_season.episodes.empty?
@@ -390,21 +410,22 @@ def analyze_show(show, path, type)
   end
 end
 
-def analyze_season(season, path, type)
+def analyze_season(season, path, type, line)
   begin
     entries = Dir.entries path, **OPTS
     entries.each do |entry|
       next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-      analyze_episode season, entry, path + '/' + entry, type
+      analyze_episode season, entry, path + '/' + entry, type, line
+      # break # DEBUG
     end
   rescue Errno::EACCES => _
   end
 end
 
-def analyze_episode(season, episode_name, path, type)
+def analyze_episode(season, episode_name, path, type, line)
   begin
     return if File.directory? path
-    print "\rcalculating checksum for #{path}".truncate($terminal_size[:width] + 1).ljust($terminal_size[:width] + 1) if ARGV.empty?
+    print_updating("calculating checksum for #{path}", line)
     data, _cached = $cache.get(path) do
       if Time.now - $cache.last_write_time > CACHE_REFRESH
         $cache.write(CACHE_PATH)
@@ -431,6 +452,19 @@ end
 def nested_show?(show)
   nested_shows = ['A Certain Scientific Railgun', 'The Legend of Korra']
   nested_shows.include? show
+end
+
+def print_updating(msg, line)
+  return unless ARGV.empty?
+  PRINT_SEMAPHORE.synchronize do
+    str = $cursor.save
+    ($updating_lines - line).times { str << $cursor.prev_line }
+    str << $cursor.clear_line
+    str << msg.truncate($terminal_size[:width]) + "\n" #.ljust($terminal_size[:width] + 1)
+
+    str << $cursor.restore
+    print(str)
+  end
 end
 
 def remote_main
