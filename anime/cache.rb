@@ -47,7 +47,7 @@ class BaseCache
     new_modified_time = File.mtime(path)
     cached = @cache[path]
     cached = @cache[path] = self.class.load_episode(path, Time.at(0), {}) unless cached
-    return cached.payload, true if cached && new_modified_time.to_i <= cached.last_modified.to_i && cached.payload
+    return cached.payload, true if cached && new_modified_time.to_i == cached.last_modified.to_i && cached.payload
 
     new_payload = block.call()
     cached.payload = new_payload
