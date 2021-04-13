@@ -1,3 +1,4 @@
+require 'fileutils'
 require 'json'
 require 'time'
 
@@ -47,6 +48,10 @@ class BaseCache
 
   def get(path, &block)
     new_modified_time = File.mtime(path)
+    if new_modified_time <= DEFAULT_TIME
+      FileUtils.touch(path, nocreate: true)
+      new_modified_time = File.mtime(path)
+    end
     cached = @cache[path]
     cached = @cache[path] = self.class.load_episode(path, Time.at(DEFAULT_TIME), {}) unless cached
     return cached.payload, true if cached && new_modified_time.to_i == cached.last_modified.to_i && cached.last_modified != DEFAULT_TIME && cached.payload
