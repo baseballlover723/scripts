@@ -26,6 +26,11 @@ if ARGV.empty?
   require 'active_support'
   require 'active_support/number_helper'
   require 'active_support/core_ext/string/indent'
+  require 'active_support/core_ext/string/filters'
+  require 'terminal-size'
+
+  $terminal_size = Terminal.size
+  Signal.trap('SIGWINCH', proc { $terminal_size = Terminal.size })
 
   $included = Set.new
   $included << 'local'
@@ -399,7 +404,7 @@ end
 def analyze_episode(season, episode_name, path, type)
   begin
     return if File.directory? path
-    print "\rcalculating size for #{path}".ljust(120) if ARGV.empty?
+    print "\rcalculating checksum for #{path}".truncate($terminal_size[:width]).ljust($terminal_size[:width]) if ARGV.empty?
     data, _cached = $cache.get(path) do
       if Time.now - $cache.last_write_time > CACHE_REFRESH
         $cache.write(CACHE_PATH)
@@ -493,10 +498,7 @@ def trim_results
 end
 
 def print_results
-  original_verbosity = $VERBOSE
-  $VERBOSE = nil
-  cols = `tput cols`.to_i
-  $VERBOSE = original_verbosity
+  cols = $terminal_size[:width]
   print LocalString.new("local size").paint if $included.include? 'local'
   if $included.include? 'remote'
     print " ("
