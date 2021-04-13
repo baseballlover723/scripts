@@ -1,6 +1,8 @@
 require 'json'
 require 'time'
 
+DEFAULT_TIME = Time.at(0).freeze
+
 class Module
   def alias_attr(new_attr, original)
     alias_method(new_attr, original) if method_defined? original
@@ -46,8 +48,8 @@ class BaseCache
   def get(path, &block)
     new_modified_time = File.mtime(path)
     cached = @cache[path]
-    cached = @cache[path] = self.class.load_episode(path, Time.at(0), {}) unless cached
-    return cached.payload, true if cached && new_modified_time.to_i == cached.last_modified.to_i && cached.payload
+    cached = @cache[path] = self.class.load_episode(path, Time.at(DEFAULT_TIME), {}) unless cached
+    return cached.payload, true if cached && new_modified_time.to_i == cached.last_modified.to_i && cached.last_modified != DEFAULT_TIME && cached.payload
 
     new_payload = block.call()
     cached.payload = new_payload
