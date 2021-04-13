@@ -4,15 +4,15 @@ require 'shellwords'
 
 LOCAL_PATH = '/mnt/d/anime'
 # LOCAL_PATH = '/mnt/d/anime/zWatched'
-REMOTE_PATH = '/entertainment/anime/_batch4'
+REMOTE_PATH = '/entertainment/anime'
 # LOCAL_PATH = '/mnt/e/movies'
 # REMOTE_PATH = '/entertainment/movies'
-ANIME_NAME = "Re;ZERO Starting Life in Another World (In Progress)/Season 2 (In Progress)"
+ANIME_NAME = ".hack"
 # ANIME_NAME = 'Olympus Has Fallen/Angel Has Fallen (2019) [1080p] {x265}'
 # ANIME_NAME = 'Log Horizon'
 OPTS = {encoding: 'UTF-8'}
 
-OPTIONS = "-aPv -e 'ssh -p 666' --timeout 10 --protect-args"
+OPTIONS = "-acPv -e 'ssh -p 666' --timeout 10 --protect-args"
 
 def main
   iterate_recursive local do |episode_path|
