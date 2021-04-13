@@ -1,3 +1,5 @@
+require 'digest'
+
 REMOTE = !ARGV.empty?
 LOCAL_PATH = '/mnt/d/anime'
 EXTERNAL_PATH = '/mnt/g/anime'
@@ -11,6 +13,7 @@ OPTS = {encoding: 'UTF-8'}
 RESULTS = {}
 HIDE_LOCAL_ONLY = false
 # TODO hide_local_only make extensible so it dosen't only depend on local and remote
+DIGEST_ALGO = Digest::SHA256
 
 if ARGV.empty?
   require 'dotenv/load'
@@ -91,7 +94,7 @@ class Season
 end
 
 class Episode
-  attr_accessor :season, :name, :local_size, :remote_size, :external_size, :long_external_size, :external_size_extra
+  attr_accessor :season, :name, :local_size, :remote_size, :external_size, :long_external_size, :external_size_extra, :local_checksum, :remote_checksum, :external_checksum, :long_external_checksum
 
   def initialize(season, name)
     @season = season
@@ -100,6 +103,10 @@ class Episode
     @remote_size = 0
     @external_size = 0
     @long_external_size = 0
+    @local_checksum = 0
+    @remote_checksum = 0
+    @external_checksum = 0
+    @long_external_checksum = 0
     season.add_episode self
   end
 
@@ -146,65 +153,98 @@ class Episode
   end
 
   def human_sizes
-    sizes = {}
-    sizes[:local_size] = LocalString.new(h_size(@local_size)).uncolor if $included.include? 'local'
-    sizes[:remote_size] = RemoteString.new(h_size(@remote_size)).uncolor if $included.include? 'remote'
-    sizes[:external_size] = ExternalString.new(h_size(@external_size)).uncolor if $included.include? 'external'
-    sizes[:long_external_size] = LongExternalString.new(h_size(@long_external_size)).uncolor if $included.include? 'long_external'
-    sizes
+    if sizes_same?
+      checksum_mapping = {'0' => '0'}
+      index = 0
+      [@local_checksum.to_s, @remote_checksum.to_s, @external_checksum.to_s, @long_external_checksum.to_s].each do |checksum|
+        if checksum_mapping[checksum].nil?
+          index += 1
+          checksum_mapping[checksum] = "Checksum ##{index}"
+        end
+      end
+      checksums = {}
+      checksums[:local] = LocalString.new(checksum_mapping[@local_checksum.to_s]).uncolor if $included.include? 'local'
+      checksums[:remote] = RemoteString.new(checksum_mapping[@remote_checksum.to_s]).uncolor if $included.include? 'remote'
+      checksums[:external] = ExternalString.new(checksum_mapping[@external_checksum.to_s]).uncolor if $included.include? 'external'
+      checksums[:long_external] = LongExternalString.new(checksum_mapping[@long_external_checksum.to_s]).uncolor if $included.include? 'long_external'
+      [:checksum, checksums]
+    else
+      sizes = {}
+      sizes[:local] = LocalString.new(h_size(@local_size)).uncolor if $included.include? 'local'
+      sizes[:remote] = RemoteString.new(h_size(@remote_size)).uncolor if $included.include? 'remote'
+      sizes[:external] = ExternalString.new(h_size(@external_size)).uncolor if $included.include? 'external'
+      sizes[:long_external] = LongExternalString.new(h_size(@long_external_size)).uncolor if $included.include? 'long_external'
+      [:size, sizes]
+    end
   end
 
   def h_size(size)
     ActiveSupport::NumberHelper.number_to_human_size(size, {precision: 5, strip_insignificant_zeros: false})
   end
 
+  def sizes_same?()
+    sizes = Set.new
+    $included.each do |type|
+      sizes << @local_size if $included.include? 'local'
+      sizes << @remote_size if $included.include? 'remote'
+      sizes << @external_size if $included.include? 'external'
+      sizes << @long_external_size if $included.include? 'long_external'
+    end
+    sizes.delete(0)
+    sizes.size == 1
+  end
+
   def to_s
-    sizes = human_sizes
-
-    # count number of times size shows up
-    size_count = Hash.new(0)
-    # 0 is always colored
-    size_count['0 Bytes'.uncolor] = sizes.count * -1 + 1
-    # must be 2 or more in order to be uncolored
-    size_count['min repetitions to color'] = 2
-    biggest_size_names.each do |biggest_size_name|
-      # drop @ and convert to symbol
-      size_count[sizes[biggest_size_name[1..-1].to_sym].uncolor] = sizes.count
-    end
-
-    # initialize all sizes in size count
-    sizes.each do |_size_type, size|
-      size_count[size] = 0 unless size_count.include? size
-    end
-    sizes.each do |_size_type, size|
-      size_count[size.dup] += 1
-    end
-
-    # color if not the most common (0 always colored)
-    max_size_count = size_count.values.max
-    sizes.each do |size_type, size|
-      if size_count[size] == max_size_count
-        sizes[size_type] = size.uncolor
-      else
-        sizes[size_type] = size.paint
-      end
-    end
-
-    sizes[:external_size] = sizes[:external_size].paint if in_both_external?
-    sizes[:long_external_size] = sizes[:long_external_size].paint if in_both_external?
-
     name = File.basename(@name, '.*').cyan
     name = @name.cyan
     return "#{name}" if defined?(HIDE_LOCAL_ONLY) && HIDE_LOCAL_ONLY && local_size != 0 && remote_size == 0
     str = "#{name}:"
-    str << " #{sizes[:local_size]}" if sizes.has_key? :local_size
-    str << " (#{sizes[:remote_size]})" if sizes.has_key?(:remote_size)
+
+    different_part, human_strs = human_sizes
+
+    # count number of times size shows up
+    counts = Hash.new(0)
+    # 0 is always colored
+    counts['0 Bytes'.uncolor] = human_strs.count * -1 + 1
+    # must be 2 or more in order to be uncolored
+    counts['min repetitions to color'] = 2
+
+    if different_part == :size
+      biggest_size_names.each do |biggest_size_name|
+        # drop @, size / checksum and convert to symbol
+        counts[human_strs[biggest_size_name[1..-1].split('_')[0..-2].join('_').to_sym].uncolor] = human_strs.count
+      end
+    end
+
+    # initialize all sizes in size count
+    human_strs.each do |_size_type, size|
+      counts[size] = 0 unless counts.include? size
+    end
+    human_strs.each do |_size_type, size|
+      counts[size.dup] += 1
+    end
+
+    # color if not the most common (0 always colored)
+    max_size_count = counts.values.max
+    human_strs.each do |size_type, size|
+      if counts[size] == max_size_count
+        human_strs[size_type] = size.uncolor
+      else
+        human_strs[size_type] = size.paint
+      end
+    end
+
+    human_strs[:external] = human_strs[:external].paint if in_both_external?
+    human_strs[:long_external] = human_strs[:long_external].paint if in_both_external?
+
+    str << " #{human_strs[:local]}" if human_strs.has_key? :local
+    str << " (#{human_strs[:remote]})" if human_strs.has_key?(:remote)
     both_zero = external_size == long_external_size && external_size == 0
-    # str << " [both]" if both_zero && (sizes.has_key?(:external_size) || sizes.has_key?(:long_external_size))
-    str << " [#{sizes[:external_size]}]" if both_zero && (sizes.has_key?(:external_size) || sizes.has_key?(:long_external_size))
-    str << " [#{sizes[:external_size]}]" if !both_zero && sizes.has_key?(:external_size) && external_size != 0
+    # str << " [both]" if both_zero && (sizes.has_key?(:external) || sizes.has_key?(:long_external))
+    str << " [#{human_strs[:external]}]" if both_zero && (human_strs.has_key?(:external) || human_strs.has_key?(:long_external))
+    str << " [#{human_strs[:external]}]" if !both_zero && human_strs.has_key?(:external) && external_size != 0
     str << ' &' if in_both_external?
-    str << " {#{sizes[:long_external_size]}}" if !both_zero && sizes.has_key?(:long_external_size) && long_external_size != 0
+    str << " {#{human_strs[:long_external]}}" if !both_zero && human_strs.has_key?(:long_external) && long_external_size != 0
     str << @external_size_extra.to_s
     str
   end
@@ -256,10 +296,11 @@ def iterate(path, type)
   count = 0
   shows.each do |show|
     next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini'
-    # next unless show.start_with?('C')
-    analyze_show show, path + '/' + show, type
     count += 1
-    # break if count > 5
+    # break if count > 5 # DEBUG
+    # next unless show < "A"
+    # next unless show.start_with?('A Silent')
+    analyze_show show, path + '/' + show, type
   end
 end
 
@@ -299,6 +340,7 @@ end
 def analyze_episode(season, episode_name, path, type)
   begin
     return if File.directory? path
+    print "\rcalculating size for #{path}".ljust(120) if ARGV.empty?
     file_size = File.size(path)
     if (file_size == 0) # so
       file_size = 1
@@ -310,6 +352,7 @@ def analyze_episode(season, episode_name, path, type)
     end
     episode = find_episode season, episode_name
     episode.send(type + '_size=', file_size)
+    episode.send(type + '_checksum=', DIGEST_ALGO.file(path).to_s)
   rescue Errno::EACCES => _
   end
 end
@@ -356,19 +399,22 @@ def trim_results
     show.seasons.each_value do |season|
       season.episodes.each_value do |episode|
         sizes = Set.new
+        checksums = Set.new
         included = $included.dup
         included.delete('external') if episode.external_size != episode.long_external_size && episode.external_size == 0
         included.delete('long_external') if episode.external_size != episode.long_external_size && episode.long_external_size == 0
         included.each do |type|
           sizes << episode.send("#{type}_size")
+          checksums << episode.send("#{type}_checksum").to_s
         end
-        season.episodes.delete(episode.name) if sizes.size == 1
+
+        season.episodes.delete(episode.name) if sizes.size == 1 && checksums.size == 1
         # if sizes.size == 2 && $included.include?('long_external')
         #   non_long_external_sizes = Set.new
         #   $included.each do |type|
         #     non_long_external_sizes << episode.send("#{type}_size") unless type == 'long_external'
         #   end
-        season.episodes.delete(episode.name) if sizes.size == 1 #if non_long_external_sizes.size == 1
+        season.episodes.delete(episode.name) if sizes.size == 1 && checksums.size == 1 #if non_long_external_sizes.size == 1
         # end
       end
       show.seasons.delete(season.name) if season.episodes.size == 0
