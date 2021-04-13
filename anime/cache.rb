@@ -13,10 +13,11 @@ end
 class BaseCache
   LAST_MODIFIED_KEY = 'last_modified'.freeze
 
-  attr_accessor :cache
+  attr_accessor :cache, :last_write_time
 
   def initialize(cache)
     @cache = cache
+    @last_write_time = Time.now
   end
 
   def self.load(path)
@@ -35,6 +36,7 @@ class BaseCache
   def write(path)
     sorted_cache = cache.sort_by {|path, _obj| path}.to_h
     File.write(path, JSON.generate(sorted_cache))
+    @last_write_time = Time.now
   end
 
   def self.load_episode(_path, _last_modified, _payload)
