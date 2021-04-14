@@ -201,7 +201,6 @@ class Episode
     $included.each do |type|
       sizes << send((type + '_size').to_sym)
     end
-    sizes.delete(0)
     sizes.size == 1
   end
 

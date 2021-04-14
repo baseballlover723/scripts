@@ -199,10 +199,15 @@ class Episode
 
   def sizes_same?()
     sizes = Set.new
-    $included.each do |type|
+    filtered_types = []
+    both_zero = external_size == long_external_size && external_size == 0
+    filtered_types << 'external' if both_zero || (!both_zero && external_size == 0)
+    filtered_types << 'long_external' if both_zero || (!both_zero && long_external_size == 0)
+    $included.reject do |type|
+      filtered_types.include?(type)
+    end.each do |type|
       sizes << send((type + '_size').to_sym)
     end
-    sizes.delete(0)
     sizes.size == 1
   end
 
