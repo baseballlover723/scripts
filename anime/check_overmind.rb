@@ -15,9 +15,10 @@ RESULTS = {}
 HIDE_LOCAL_ONLY = false
 # TODO hide_local_only make extensible so it dosen't only depend on local and remote
 CACHE_PATH = 'check_overminds.cache.json'
-CACHE_REFRESH = 30
+CACHE_REFRESH = 30 # seconds
 DIGEST_ALGO = Digest::SHA256
 ANIME_SEMAPHORE = Mutex.new
+CACHE_SEMAPHORE = Mutex.new
 PRINT_SEMAPHORE = Mutex.new
 
 if ARGV.empty?
@@ -348,7 +349,7 @@ def main
     threads << Thread.new do
       iterate LOCAL_PATH + '/zWatched', 'local', 0
       iterate LOCAL_PATH, 'local', 0
-      $cache.write(CACHE_PATH)
+      CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) }
       print_updating("done running local", 0)
     end
   end
@@ -357,7 +358,7 @@ def main
     threads << Thread.new do
       iterate EXTERNAL_PATH + '/zWatched', 'external', 1
       iterate EXTERNAL_PATH, 'external', 1
-      $cache.write(CACHE_PATH)
+      CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) }
       print_updating("done running external", 1)
     end
   end
@@ -366,7 +367,7 @@ def main
     threads << Thread.new do
       iterate LONG_EXTERNAL_PATH + '/zWatched', 'long_external', 2
       iterate LONG_EXTERNAL_PATH, 'long_external', 2
-      $cache.write(CACHE_PATH)
+      CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) }
       print_updating("done running long_external", 2)
     end
   end
@@ -428,7 +429,7 @@ def analyze_episode(season, episode_name, path, type, line)
     print_updating("calculating checksum for #{path}", line)
     data, _cached = $cache.get(path) do
       if Time.now - $cache.last_write_time > CACHE_REFRESH
-        $cache.write(CACHE_PATH)
+        CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) if Time.now - $cache.last_write_time > CACHE_REFRESH }
       end
       file_size = File.size(path)
       if (file_size == 0) # so
