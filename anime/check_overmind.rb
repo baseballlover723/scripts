@@ -316,8 +316,8 @@ def main
     begin
       Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
         ssh.sftp.connect do |sftp|
-          sftp.upload!(__FILE__, "remote.rb")
-          sftp.upload!("cache.rb", "cache.rb")
+          sftp.upload!(__FILE__, 'remote.rb')
+          sftp.upload!('cache.rb', 'cache.rb')
         end
         puts 'running on remote'
         serialized_results = ssh.exec! "source load_rbenv && ruby remote.rb remote"
@@ -414,7 +414,6 @@ def analyze_season(season, path, type, line)
     entries.each do |entry|
       next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
       analyze_episode season, entry, path + '/' + entry, type, line
-      # break # DEBUG
     end
   rescue Errno::EACCES => _
   end
@@ -458,7 +457,7 @@ def print_updating(msg, line)
     str = $cursor.save
     ($updating_lines - line).times { str << $cursor.prev_line }
     str << $cursor.clear_line
-    str << msg.truncate($terminal_size[:width]) + "\n" #.ljust($terminal_size[:width] + 1)
+    str << msg.truncate($terminal_size[:width]) + "\n"
 
     str << $cursor.restore
     print(str)
