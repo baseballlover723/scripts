@@ -429,21 +429,24 @@ def analyze_episode(season, episode_name, path, location, line)
     human_path = path
     human_path = path.split("/").map { |p| p.match(TV_EPISODE_REGEX) ? p[TV_EPISODE_REGEX] : p }.join("/") if path.match TV_EPISODE_REGEX
     print_updating("calculating checksum for #{human_path}", line)
-    data, _cached = $cache.get(path) do
-      if Time.now - $cache.last_write_time > CACHE_REFRESH
-        CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) if Time.now - $cache.last_write_time > CACHE_REFRESH }
-      end
-      if File.directory?(path)
-        file_size = directory_size(path)
-      else
+    if File.directory?(path)
+      # never cache nested folders, since the modified time isn't reliable
+      file_size = directory_size(path)
+      checksum = directory_checksum(path)
+      data = {CHECKSUM_KEY => checksum, SIZE_KEY => file_size}
+    else
+      data, _cached = $cache.get(path) do
+        if Time.now - $cache.last_write_time > CACHE_REFRESH
+          CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) if Time.now - $cache.last_write_time > CACHE_REFRESH }
+        end
         file_size = File.size(path)
         if (file_size == 0) # so
           file_size = 1
         end
+        episode_name.chomp!('.filepart')
+        episode_name.chomp!('.crdownload')
+        {CHECKSUM_KEY => DIGEST_ALGO.file(path).to_s, SIZE_KEY => file_size}
       end
-      episode_name.chomp!('.filepart')
-      episode_name.chomp!('.crdownload')
-      {CHECKSUM_KEY => DIGEST_ALGO.file(path).to_s, SIZE_KEY => file_size}
     end
     # return unless episode_name.end_with? *MOVIE_EXTENSIONS
     episode = find_episode season, episode_name
@@ -465,6 +468,25 @@ def directory_size(path)
     total_size += directory_size f if File.directory? f
   end
   total_size
+end
+
+def directory_checksum(path)
+  checksums = directory_checksum_helper(path).join(', ')
+  DIGEST_ALGO.hexdigest(checksums).to_s
+end
+
+def directory_checksum_helper(path)
+  raise RuntimeError, "#{path} is not a directory" unless File.directory?(path)
+
+  checksums = []
+  entries = Dir.entries path, **OPTS
+  entries.each do |f|
+    next if f == '.' || f == '..' || f == 'zWatched' || f == 'desktop.ini'
+    f = "#{path}/#{f}"
+    checksums << DIGEST_ALGO.file(f).to_s if File.file?(f)
+    checksums = checksums + directory_checksum_helper(f) if File.directory? f
+  end
+  checksums
 end
 
 def show_group?(name)

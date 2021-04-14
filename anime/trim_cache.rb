@@ -24,7 +24,7 @@ def trim_cache(path)
 end
 
 def still_exists?(path)
-  File.exist?(path)
+  File.exist?(path) && !File.directory?(path)
 end
 
 start = Time.now
