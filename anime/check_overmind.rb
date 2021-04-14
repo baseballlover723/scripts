@@ -339,33 +339,37 @@ def main
 
   threads = []
   Thread.abort_on_exception = true
+  current_line = -1
 
   puts
   if $included.include? 'local'
     puts 'running locally'
-    threads << Thread.new do
-      iterate LOCAL_PATH + '/zWatched', 'local', 0
-      iterate LOCAL_PATH, 'local', 0
+    current_line += 1
+    threads << Thread.new(current_line) do |line|
+      iterate LOCAL_PATH + '/zWatched', 'local', line
+      iterate LOCAL_PATH, 'local', line
       CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) }
-      print_updating("done running local", 0)
+      print_updating("done running local", line)
     end
   end
   if $included.include? 'external'
     puts 'running on external'
-    threads << Thread.new do
-      iterate EXTERNAL_PATH + '/zWatched', 'external', 1
-      iterate EXTERNAL_PATH, 'external', 1
+    current_line += 1
+    threads << Thread.new(current_line) do |line|
+      iterate EXTERNAL_PATH + '/zWatched', 'external', line
+      iterate EXTERNAL_PATH, 'external', line
       CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) }
-      print_updating("done running external", 1)
+      print_updating("done running external", line)
     end
   end
   if $included.include? 'long_external'
     puts 'running on long external'
-    threads << Thread.new do
-      iterate LONG_EXTERNAL_PATH + '/zWatched', 'long_external', 2
-      iterate LONG_EXTERNAL_PATH, 'long_external', 2
+    current_line += 1
+    threads << Thread.new(current_line) do |line|
+      iterate LONG_EXTERNAL_PATH + '/zWatched', 'long_external', line
+      iterate LONG_EXTERNAL_PATH, 'long_external', line
       CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) }
-      print_updating("done running long_external", 2)
+      print_updating("done running long_external", line)
     end
   end
   threads.each { |thread| thread.join }
