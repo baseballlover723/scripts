@@ -117,14 +117,14 @@ def rsync_anime(anime, mode, index_str = '')
     local_path = "#{local_anime}#{episode_path}"
     episode_path = File.dirname(episode_path)[0..-2] if directories # send to parent and remove . from end
     remote_path = "#{remote(anime)}#{episode_path}"
-    puts "syncing #{local_path} to #{remote_path}".indent $indent
+    puts "syncing (#{mode}) #{local_path} to #{remote_path}".indent $indent
     run_shell_command "rsync #{options} #{local_path.shellescape} #{remote_path.shellescape}"
   end
   if directories
     # Root folder
     local_path = local_anime[0..-2]
     remote_path = File.dirname(remote(anime))
-    puts "syncing #{local_path} to #{remote_path}".indent $indent
+    puts "syncing (#{mode}) #{local_path} to #{remote_path}".indent $indent
     run_shell_command "rsync #{options} #{local_path.shellescape} #{remote_path.shellescape}"
   end
   $indent -= $indent_size
