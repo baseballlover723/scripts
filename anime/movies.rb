@@ -1,9 +1,12 @@
+require 'digest'
+require_relative './cache'
+
 REMOTE = !ARGV.empty?
 # LOCAL_PATH = '/mnt/c/Users/Philip Ross/Downloads'
 LOCAL_PATHES = {movies: '/mnt/e/movies', tv: '/mnt/e/tv'}
 EXTERNAL_PATHES = {movies: '/mnt/h/movies', tv: '/mnt/i/tv'}
 # EXTERNAL_PATHES = {movies: '/mnt/e/movies'}
-REMOTE_PATHES = {movies: '../../entertainment/movies', tv: '../../entertainment/tv'}
+REMOTE_PATHS = {movies: 'entertainment/movies', tv: '/entertainment/tv'}
 # REMOTE_PATHES = {movies: '../../entertainment/movies'}
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {movies: {}, tv: {}}
@@ -11,8 +14,13 @@ MOVIE_EXTENSIONS = ['.mkv', '.mp4', '.m4v', '.srt', '.avi']
 BLACKLIST = ['anime', 'Naruto', 'Naruto - Copy']
 # FILTER = /Season \d\d - Episode(s?) \d\d\d-\d\d\d/
 FILTER = /Naruto/
-# Need to transfer 1.9074 TB: EST: 16 days, 22 hours, 20 minutes and 59 seconds (1400 KB/s)
-# Need to transfer 1.9074 TB: EST: 16 days, 22 hours, 20 minutes and 59 seconds (1400 KB/s)
+CACHE_PATH = 'moviess.cache.json'
+CACHE_REFRESH = 30 # seconds
+DIGEST_ALGO = Digest::SHA256
+ANIME_SEMAPHORE = Mutex.new
+CACHE_SEMAPHORE = Mutex.new
+PRINT_SEMAPHORE = Mutex.new
+
 if ARGV.empty?
   require 'dotenv/load'
   require 'net/ssh'
@@ -21,6 +29,13 @@ if ARGV.empty?
   require 'active_support'
   require 'active_support/number_helper'
   require 'active_support/core_ext/string/indent'
+  require 'active_support/core_ext/string/filters'
+  require 'terminal-size'
+  require 'tty-cursor'
+
+  $terminal_size = Terminal.size
+  Signal.trap('SIGWINCH', proc { $terminal_size = Terminal.size })
+  $cursor = TTY::Cursor
 
   $included = Set.new
   # $included << 'remote'
@@ -30,7 +45,9 @@ if ARGV.empty?
   puts 'skipping local' unless $included.include? 'local'
   puts 'skipping external' unless $included.include? 'external'
 
-  # abort("overmind or an external hard drive need to be connected to work") unless ($included.size > 1)
+  abort("overmind or an external hard drive need to be connected to work") unless ($included.size > 1)
+
+  $updating_lines = $included.dup.delete('remote').size + ($included.include?('external') ? 1 : 0)
 end
 
 class String
@@ -111,14 +128,17 @@ class Season
 end
 
 class Episode
-  attr_accessor :season, :name, :remote_size, :external_size, :local_size
+  attr_accessor :season, :name, :remote_size, :external_size, :local_size, :local_checksum, :remote_checksum, :external_checksum
 
   def initialize(season, name)
     @season = season
     @name = name
+    @local_size = 0
     @remote_size = 0
     @external_size = 0
-    @local_size = 0
+    @local_checksum = 0
+    @remote_checksum = 0
+    @external_checksum = 0
     season.add_episode self
   end
 
@@ -149,68 +169,146 @@ class Episode
   end
 
   def human_sizes
-    sizes = {}
-    sizes[:local_size] = LocalString.new(h_size(@local_size)).uncolor if $included.include? 'local'
-    sizes[:remote_size] = RemoteString.new(h_size(@remote_size)).uncolor if $included.include? 'remote'
-    sizes[:external_size] = ExternalString.new(h_size(@external_size)).uncolor if $included.include? 'external'
-    sizes
+    if sizes_same?
+      checksum_mapping = {'0' => '0'}
+      index = 0
+      [@local_checksum.to_s, @remote_checksum.to_s, @external_checksum.to_s].each do |checksum|
+        if checksum_mapping[checksum].nil?
+          index += 1
+          checksum_mapping[checksum] = "Checksum ##{index}"
+        end
+      end
+      checksums = {}
+      checksums[:local] = LocalString.new(checksum_mapping[@local_checksum.to_s]).uncolor if $included.include? 'local'
+      checksums[:remote] = RemoteString.new(checksum_mapping[@remote_checksum.to_s]).uncolor if $included.include? 'remote'
+      checksums[:external] = ExternalString.new(checksum_mapping[@external_checksum.to_s]).uncolor if $included.include? 'external'
+      [:checksum, checksums]
+    else
+      sizes = {}
+      sizes[:local] = LocalString.new(h_size(@local_size)).uncolor if $included.include? 'local'
+      sizes[:remote] = RemoteString.new(h_size(@remote_size)).uncolor if $included.include? 'remote'
+      sizes[:external] = ExternalString.new(h_size(@external_size)).uncolor if $included.include? 'external'
+      [:size, sizes]
+    end
   end
 
   def h_size(size)
     ActiveSupport::NumberHelper.number_to_human_size(size, {precision: 5, strip_insignificant_zeros: false})
   end
 
+  def sizes_same?()
+    sizes = Set.new
+    $included.each do |type|
+      sizes << send((type + '_size').to_sym)
+    end
+    sizes.delete(0)
+    sizes.size == 1
+  end
+
   def to_s
-    sizes = human_sizes
-
-    # count number of times size shows up
-    size_count = Hash.new(0)
-    # 0 is always colored
-    size_count['0 Bytes'.uncolor] = sizes.count * -1 + 1
-    # must be 2 or more in order to be uncolored
-    size_count['min repetitions to color'] = 2
-    biggest_size_names.each do |biggest_size_name|
-      # drop @ and convert to symbol
-      size_count[sizes[biggest_size_name[1..-1].to_sym].uncolor] = sizes.count
-    end
-
-    # initialize all sizes in size count
-    sizes.each do |_size_location, size|
-      size_count[size] = 0 unless size_count.include? size
-    end
-    sizes.each do |_size_location, size|
-      size_count[size.dup] += 1
-    end
-
-    # color if not the most common (0 always colored)
-    max_size_count = size_count.values.max
-    sizes.each do |size_location, size|
-      if size_count[size] == max_size_count
-        sizes[size_location] = size.uncolor
-      else
-        sizes[size_location] = size.paint
-      end
-    end
-
     # name = File.basename(@name, '.*'). cyan
     name = @name
     name = name[/.*S\d\dE\d\d/] if name[/S\d\dE\d\d/]
     name = name.cyan
     str = "#{name}:"
-    str << " #{sizes[:local_size]}" if sizes.has_key? :local_size
-    str << " (#{sizes[:remote_size]})" if sizes.has_key? :remote_size
-    str << " [#{sizes[:external_size]}]" if sizes.has_key? :external_size
+
+    different_part, human_strs = human_sizes
+
+    # count number of times size shows up
+    counts = Hash.new(0)
+    # 0 is always colored
+    counts['0 Bytes'.uncolor] = human_strs.count * -1 + 1
+    # must be 2 or more in order to be uncolored
+    counts['min repetitions to color'] = 2
+
+    if different_part == :size
+      biggest_size_names.each do |biggest_size_name|
+        # drop @ and convert to symbol
+        counts[human_strs[biggest_size_name[1..-1].split('_')[0..-2].join('_').to_sym].uncolor] = human_strs.count
+      end
+    end
+
+    # initialize all sizes in size count
+    human_strs.each do |_size_location, size|
+      counts[size] = 0 unless counts.include? size
+    end
+    human_strs.each do |_size_location, size|
+      counts[size.dup] += 1
+    end
+
+    # color if not the most common (0 always colored)
+    max_size_count = counts.values.max
+    human_strs.each do |size_location, size|
+      if counts[size] == max_size_count
+        human_strs[size_location] = size.uncolor
+      else
+        human_strs[size_location] = size.paint
+      end
+    end
+
+    str << " #{human_strs[:local]}" if human_strs.has_key? :local
+    str << " (#{human_strs[:remote]})" if human_strs.has_key? :remote
+    str << " [#{human_strs[:external]}]" if human_strs.has_key? :external
     str
+  end
+end
+
+class Cache < BaseCache
+  def initialize(cache)
+    super(cache)
+  end
+
+  def self.load_episode(path, last_modified, payload)
+    CacheEpisode.new(path, last_modified, payload)
+  end
+
+  def write(path = CACHE_PATH)
+    super(path)
+  end
+end
+
+CHECKSUM_KEY = 'checksum'.freeze
+SIZE_KEY = 'size'.freeze
+
+class CacheEpisode < BaseCachePayload
+
+  def initialize(path, last_modified, payload)
+    super(path, last_modified, payload)
+  end
+
+  def checksum
+    payload[CHECKSUM_KEY]
+  end
+
+  def checksum=(checksum)
+    payload[CHECKSUM_KEY] = checksum
+  end
+
+  def size
+    payload[SIZE_KEY]
+  end
+
+  def size=(size)
+    payload[SIZE_KEY] = size
+  end
+
+  def as_json(options = {})
+    hash = super(options)
+    hash[:checksum] = checksum
+    hash[:size] = size
+    hash
   end
 end
 
 def main
   puts Time.now
+  $cache = Cache.load(CACHE_PATH)
   if $included.include? 'remote'
     begin
       Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
         ssh.sftp.connect do |sftp|
-          sftp.upload!(__FILE__, "remote.rb")
+          sftp.upload!(__FILE__, 'remote.rb')
+          sftp.upload!('cache.rb', 'cache.rb')
         end
         puts 'running on remote'
         serialized_results = ssh.exec! "source load_rbenv && ruby remote.rb remote"
@@ -221,27 +319,45 @@ def main
           puts serialized_results
         end
         ssh.exec! "rm remote.rb"
+        ssh.exec! "rm cache.rb"
       end
     rescue Errno::EAGAIN => e
       puts 'could not connect to overmind'
       $included.delete('remote')
     end
   end
+
+  threads = []
+  Thread.abort_on_exception = true
+  current_line = -1
+
+  puts
   if $included.include? 'local'
     puts 'running on local'
-    LOCAL_PATHES.each do |type, path|
-      iterate path, 'local', type
+    current_line += 1
+    threads << Thread.new(current_line) do |line|
+      LOCAL_PATHES.each do |type, path|
+        iterate path, 'local', type, line
+        CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) }
+        print_updating("done running local", line)
+      end
     end
   end
   if $included.include? 'external'
-    puts 'running on external'
     EXTERNAL_PATHES.each do |type, path|
-      iterate path, 'external', type
+      puts "running on external (#{type})"
+      current_line += 1
+      threads << Thread.new(current_line) do |line|
+        iterate path, 'external', type, line
+        CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) }
+        print_updating("done running #{path}", line)
+      end
     end
   end
+  threads.each { |thread| thread.join }
 end
 
-def iterate(path, location, type)
+def iterate(path, location, type, line = 0)
   shows = Dir.entries path, **OPTS
   count = 0
   shows.each do |show_name|
@@ -250,30 +366,30 @@ def iterate(path, location, type)
     next if BLACKLIST.include? show_name
     next if show_name[FILTER]
     # next unless show.start_with?('C')
-    analyze_show_group show_name, path + '/' + show_name, location, type
+    analyze_show_group show_name, path + '/' + show_name, location, type, line
     count += 1
     # break if count > 2
   end
 end
 
-def analyze_show_group(name, path, location, type)
+def analyze_show_group(name, path, location, type, line)
   begin
     show_group = find_show_group name, type
     if show_group.ignore?
-      analyze_show show_group, name, path, location, type
+      analyze_show show_group, name, path, location, type, line
       return
     end
 
     entries = Dir.entries path, **OPTS
     entries.each do |entry|
       next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-      analyze_show show_group, entry, path + '/' + entry, location, type
+      analyze_show show_group, entry, path + '/' + entry, location, type, line
     end
   rescue Errno::EACCES => _
   end
 end
 
-def analyze_show(show_group, show_name, path, location, type)
+def analyze_show(show_group, show_name, path, location, type, line)
   begin
     # iterate(path, location, type) if nested_folder? show_name
     # (analyze_show_group(show_name, path, location, type); return) if show_group? show_name
@@ -283,9 +399,9 @@ def analyze_show(show_group, show_name, path, location, type)
     entries.sort.each do |entry|
       next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
       if File.directory?("#{path}/#{entry}")
-        analyze_season find_season(show, entry), path + '/' + entry, location
+        analyze_season find_season(show, entry), path + '/' + entry, location, line
       else
-        analyze_episode root_season, entry, path + '/' + entry, location
+        analyze_episode root_season, entry, path + '/' + entry, location, line
       end
     end
     if root_season.episodes.empty?
@@ -295,32 +411,44 @@ def analyze_show(show_group, show_name, path, location, type)
   end
 end
 
-def analyze_season(season, path, location)
+def analyze_season(season, path, location, line)
   begin
     entries = Dir.entries path, **OPTS
     entries.sort.each do |entry|
       next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-      analyze_episode season, entry, path + '/' + entry, location
+      analyze_episode season, entry, path + '/' + entry, location, line
     end
   rescue Errno::EACCES => _
   end
 end
 
-def analyze_episode(season, episode_name, path, location)
+TV_EPISODE_REGEX = /S\d\dE\d\d/i
+
+def analyze_episode(season, episode_name, path, location, line)
   begin
-    if File.directory?(path)
-      file_size = directory_size(path)
-    else
-      file_size = File.size(path)
-      if (file_size == 0) # so
-        file_size = 1
+    human_path = path
+    human_path = path.split("/").map { |p| p.match(TV_EPISODE_REGEX) ? p[TV_EPISODE_REGEX] : p }.join("/") if path.match TV_EPISODE_REGEX
+    print_updating("calculating checksum for #{human_path}", line)
+    data, _cached = $cache.get(path) do
+      if Time.now - $cache.last_write_time > CACHE_REFRESH
+        CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) if Time.now - $cache.last_write_time > CACHE_REFRESH }
       end
+      if File.directory?(path)
+        file_size = directory_size(path)
+      else
+        file_size = File.size(path)
+        if (file_size == 0) # so
+          file_size = 1
+        end
+      end
+      episode_name.chomp!('.filepart')
+      episode_name.chomp!('.crdownload')
+      {CHECKSUM_KEY => DIGEST_ALGO.file(path).to_s, SIZE_KEY => file_size}
     end
-    episode_name.chomp!('.filepart')
-    episode_name.chomp!('.crdownload')
     # return unless episode_name.end_with? *MOVIE_EXTENSIONS
     episode = find_episode season, episode_name
-    episode.send(location + '_size=', file_size)
+    episode.send(location + '_size=', data[SIZE_KEY])
+    episode.send(location + '_checksum=', data[CHECKSUM_KEY])
   rescue Errno::EACCES => _
   end
 end
@@ -354,9 +482,24 @@ def nested_folder?(show_name)
   nested_folders.include? show_name
 end
 
+def print_updating(msg, line)
+  return unless ARGV.empty?
+  PRINT_SEMAPHORE.synchronize do
+    str = $cursor.save
+    ($updating_lines - line).times { str << $cursor.prev_line }
+    str << $cursor.clear_line
+    str << msg.truncate($terminal_size[:width]) + "\n"
+
+    str << $cursor.restore
+    print(str)
+  end
+end
+
 def remote_main
+  $cache = Cache.load(CACHE_PATH)
   REMOTE_PATHES.each do |type, path|
     iterate(path, 'remote', type)
+    $cache.write(CACHE_PATH)
   end
   puts Marshal::dump(RESULTS)
 end
@@ -419,11 +562,13 @@ def trim_results
             #   season.episodes.delete(episode.name) if non_local_sizes.size == 1 && non_local_sizes.none? {|s| s == 0}
             # end
             sizes = Set.new
+            checksums = Set.new
             included = $included.dup
             included.each do |type|
               sizes << episode.send("#{type}_size")
+              checksums << episode.send("#{type}_checksum").to_s
             end
-            season.episodes.delete(episode.name) if sizes.size == 1
+            season.episodes.delete(episode.name) if sizes.size == 1 && checksums.size == 1
           end
           show.seasons.delete(season.name) if season.episodes.empty?
           # show.seasons.delete(season.name) if season.episodes.size > 10 # TODO delete
@@ -436,10 +581,7 @@ def trim_results
 end
 
 def print_results
-  original_verbosity = $VERBOSE
-  $VERBOSE = nil
-  $cols = `tput cols`.to_i
-  $VERBOSE = original_verbosity
+  $cols = $terminal_size[:width]
   print LocalString.new("local size").paint if $included.include? 'local'
   if $included.include? 'remote'
     print " ("
