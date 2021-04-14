@@ -443,12 +443,12 @@ def analyze_episode(season, episode_name, path, location, line)
         if (file_size == 0) # so
           file_size = 1
         end
-        episode_name.chomp!('.filepart')
-        episode_name.chomp!('.crdownload')
         {CHECKSUM_KEY => DIGEST_ALGO.file(path).to_s, SIZE_KEY => file_size}
       end
     end
     # return unless episode_name.end_with? *MOVIE_EXTENSIONS
+    episode_name.chomp!('.filepart')
+    episode_name.chomp!('.crdownload')
     episode = find_episode season, episode_name
     episode.send(location + '_size=', data[SIZE_KEY])
     episode.send(location + '_checksum=', data[CHECKSUM_KEY])

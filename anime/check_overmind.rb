@@ -434,15 +434,14 @@ def analyze_episode(season, episode_name, path, type, line)
       file_size = File.size(path)
       if (file_size == 0) # so
         file_size = 1
-      else
-        episode_name.chomp!('.filepart')
-        episode_name.chomp!('.crdownload')
-        episode_name.chomp! '.mp4'
-        episode_name.chomp! '.mkv'
       end
       {CHECKSUM_KEY => DIGEST_ALGO.file(path).to_s, SIZE_KEY => file_size}
     end
 
+    episode_name.chomp!('.filepart')
+    episode_name.chomp!('.crdownload')
+    episode_name.chomp! '.mp4'
+    episode_name.chomp! '.mkv'
     episode = find_episode season, episode_name
     episode.send(type + '_size=', data[SIZE_KEY])
     episode.send(type + '_checksum=', data[CHECKSUM_KEY])
