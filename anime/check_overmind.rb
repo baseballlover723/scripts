@@ -200,10 +200,7 @@ class Episode
   def sizes_same?()
     sizes = Set.new
     $included.each do |type|
-      sizes << @local_size if $included.include? 'local'
-      sizes << @remote_size if $included.include? 'remote'
-      sizes << @external_size if $included.include? 'external'
-      sizes << @long_external_size if $included.include? 'long_external'
+      sizes << send((type + '_size').to_sym)
     end
     sizes.delete(0)
     sizes.size == 1
