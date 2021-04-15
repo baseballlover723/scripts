@@ -12,6 +12,8 @@ REMOTE_PATH = '/entertainment/anime'
 # ANIME_NAME = ".hack"
 # ANIME_NAME = 'Olympus Has Fallen/Angel Has Fallen (2019) [1080p] {x265}'
 OPTS = {encoding: 'UTF-8'}
+SSH_CONTROL_PATH = '~/.ssh/control:%h:%p:%r'
+SSH_IDLE_TIMEOUT = 30
 
 MODES = [:unstarted, :sync_with_new_mtimes, :sync_file_with_mtimes, :sync_directories_with_mtimes, :done]
 # MODES = [:unstarted, :sync_directories_with_mtimes, :done]
@@ -24,29 +26,55 @@ MODES = [:unstarted, :sync_with_new_mtimes, :sync_file_with_mtimes, :sync_direct
 def calc_options(mode)
   case mode
   when :sync_with_new_mtimes
-    options = "-chPv -e 'ssh -p 666' --timeout 30 --protect-args"
+    options = "-chPv -e 'ssh -S #{SSH_CONTROL_PATH}' --timeout 30 --protect-args"
     directories = false
     return options, directories
   when :sync_file_with_mtimes
-    options = "-ahPv -e 'ssh -p 666' --timeout 30 --protect-args"
+    options = "-ahPv -e 'ssh -S #{SSH_CONTROL_PATH}' --timeout 30 --protect-args"
     directories = false
     return options, directories
   when :sync_directories_with_mtimes
-    options = "-ahPv -e 'ssh -p 666' --include='*/' --exclude='*' --timeout 30 --protect-args" # directory
+    options = "-ahPv -e 'ssh -S #{SSH_CONTROL_PATH}' --include='*/' --exclude='*' --timeout 30 --protect-args" # directory
     directories = true
     return options, directories
   end
 end
 
 def main
-  if defined? ANIME_NAME
-    rsync_animes([ANIME_NAME])
-  else
-    iterate_anime_files("dirty_animes_*.txt")
+  $did_work = false
+  $errors = false
+  master_ssh do
+    if defined? ANIME_NAME
+      rsync_animes([ANIME_NAME])
+    else
+      iterate_anime_files("dirty_animes_*.txt")
+    end
+  end
+end
+
+def master_ssh
+  cmd = "ssh -nNf -M -S #{SSH_CONTROL_PATH} -o 'ControlPersist=#{SSH_IDLE_TIMEOUT}' #{ENV['OVERMIND_SSH_HOST']}"
+  puts "setting up the master ssh connection with: #{cmd}"
+  `#{cmd}`
+  begin
+    yield
+  rescue Exception => e
+    stop_cmd = "ssh -O exit -S #{SSH_CONTROL_PATH} #{ENV['OVERMIND_SSH_HOST']}"
+    puts "stopping the master ssh connection with: #{stop_cmd}"
+    `#{stop_cmd}`
+    raise e
   end
 end
 
 def move_mode_forwards(path)
+  if !$did_work || $errors
+    errors = []
+    errors << "didn't do work" if !$did_work
+    errors << "had rsync errors" if $errors
+    raise "Stopping because we #{errors.join(' and ')} on the anime file: #{path}"
+  end
+  $did_work = false
+  $errors = false
   lines = File.read(path).split("\n")
   mode = lines.shift.to_sym
   next_mode = calc_next_mode(mode)
@@ -72,7 +100,7 @@ def local(anime)
 end
 
 def remote(anime)
-  "#{ENV['OVERMIND_USER']}@#{ENV['OVERMIND_HOST']}:#{REMOTE_PATH}/#{anime}/"
+  "#{ENV['OVERMIND_SSH_HOST']}:#{REMOTE_PATH}/#{anime}/"
 end
 
 def iterate_anime_files(glob)
@@ -94,6 +122,7 @@ end
 
 def rsync_animes(animes, mode = MODES.first, path = nil)
   if mode == MODES.first
+    $did_work = true if path
     mode = (path ? move_mode_forwards(path) : calc_next_mode(mode))
   end
 
@@ -119,29 +148,20 @@ def rsync_anime(anime, mode, index_str = '')
     episode_path = File.dirname(episode_path)[0..-2] if directories # send to parent and remove . from end
     remote_path = "#{remote(anime)}#{episode_path}"
     puts "syncing (#{mode}) #{local_path} to #{remote_path}".indent $indent
-    run_shell_command "rsync #{options} #{local_path.shellescape} #{remote_path.shellescape}"
+    success = run_shell_command "rsync #{options} #{local_path.shellescape} #{remote_path.shellescape}"
+    success ? $did_work = true : $errors = true
   end
   if directories
     # Root folder
     local_path = local_anime[0..-2]
     remote_path = File.dirname(remote(anime))
     puts "syncing (#{mode}) #{local_path} to #{remote_path}".indent $indent
-    run_shell_command "rsync #{options} #{local_path.shellescape} #{remote_path.shellescape}"
+    success = run_shell_command "rsync #{options} #{local_path.shellescape} #{remote_path.shellescape}"
+    success ? $did_work = true : $errors = true
   end
   $indent -= $indent_size
 
   $indent -= $indent_size
-end
-
-def local(anime)
-  path = "#{LOCAL_PATH}/#{anime}/"
-  path = "#{LOCAL_PATH}/zWatched/#{anime}/" unless Dir.exist?(path)
-  raise "can't find anime #{anime} at \"#{"#{LOCAL_PATH}/#{anime}/"}\" or \"#{path}\"" unless Dir.exist?(path)
-  path
-end
-
-def remote(anime)
-  "#{ENV['OVERMIND_USER']}@#{ENV['OVERMIND_HOST']}:#{REMOTE_PATH}/#{anime}/"
 end
 
 def iterate_recursive(path, directories = false)
@@ -162,6 +182,7 @@ def run_shell_command(command)
     end
   rescue PTY::ChildExited
   end
+  $?.success?
 end
 
 def escape_glob(s)
