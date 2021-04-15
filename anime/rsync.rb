@@ -14,6 +14,7 @@ REMOTE_PATH = '/entertainment/anime'
 OPTS = {encoding: 'UTF-8'}
 
 MODES = [:unstarted, :sync_with_new_mtimes, :sync_file_with_mtimes, :sync_directories_with_mtimes, :done]
+# MODES = [:unstarted, :sync_directories_with_mtimes, :done]
 
 # -a archieve
 # -c use checksums instead of file size
@@ -23,15 +24,15 @@ MODES = [:unstarted, :sync_with_new_mtimes, :sync_file_with_mtimes, :sync_direct
 def calc_options(mode)
   case mode
   when :sync_with_new_mtimes
-    options = "-chPv -e 'ssh -p 666' --timeout 10 --protect-args"
+    options = "-chPv -e 'ssh -p 666' --timeout 30 --protect-args"
     directories = false
     return options, directories
   when :sync_file_with_mtimes
-    options = "-ahPv -e 'ssh -p 666' --timeout 10 --protect-args"
+    options = "-ahPv -e 'ssh -p 666' --timeout 30 --protect-args"
     directories = false
     return options, directories
   when :sync_directories_with_mtimes
-    options = "-ahPv -e 'ssh -p 666' --include='*/' --exclude='*' --timeout 10 --protect-args" # directory
+    options = "-ahPv -e 'ssh -p 666' --include='*/' --exclude='*' --timeout 30 --protect-args" # directory
     directories = true
     return options, directories
   end
