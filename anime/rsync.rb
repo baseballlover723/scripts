@@ -93,10 +93,16 @@ def calc_next_mode(mode)
 end
 
 def local(anime)
-  path = "#{LOCAL_PATH}/#{anime}/"
-  path = "#{LOCAL_PATH}/zWatched/#{anime}/" unless Dir.exist?(path)
-  raise "can't find anime #{anime} at \"#{"#{LOCAL_PATH}/#{anime}/"}\" or \"#{path}\"" unless Dir.exist?(path)
-  path
+  paths = []
+  paths = add_if_exists(paths, "#{LOCAL_PATH}/zWatched/#{anime}/")
+  paths = add_if_exists(paths, "#{LOCAL_PATH}/#{anime}/")
+  raise "can't find anime #{anime} at \"#{"#{LOCAL_PATH}/#{anime}/"}\" or \"#{"#{LOCAL_PATH}/zWatched/#{anime}/"}\"" if paths.empty?
+  paths
+end
+
+def add_if_exists(paths, path)
+  paths << path if Dir.exist?(path)
+  paths
 end
 
 def remote(anime)
@@ -140,24 +146,26 @@ def rsync_anime(anime, mode, index_str = '')
   $indent += $indent_size
   puts "\n Rsyncing #{anime} with mode #{mode}#{index_str} ******************\n\n".indent $indent, "*"
   options, directories = calc_options(mode)
-  local_anime = local(anime)
+  local_animes = local(anime)
 
   $indent += $indent_size
-  iterate_recursive local_anime, directories do |episode_path|
-    local_path = "#{local_anime}#{episode_path}"
-    episode_path = File.dirname(episode_path)[0..-2] if directories # send to parent and remove . from end
-    remote_path = "#{remote(anime)}#{episode_path}"
-    puts "syncing (#{mode}) #{local_path} to #{remote_path}".indent $indent
-    success = run_shell_command "rsync #{options} #{local_path.shellescape} #{remote_path.shellescape}"
-    success ? $did_work = true : $errors = true
-  end
-  if directories
-    # Root folder
-    local_path = local_anime[0..-2]
-    remote_path = File.dirname(remote(anime))
-    puts "syncing (#{mode}) #{local_path} to #{remote_path}".indent $indent
-    success = run_shell_command "rsync #{options} #{local_path.shellescape} #{remote_path.shellescape}"
-    success ? $did_work = true : $errors = true
+  local_animes.each do |local_anime|
+    iterate_recursive local_anime, directories do |episode_path|
+      local_path = "#{local_anime}#{episode_path}"
+      episode_path = File.dirname(episode_path)[0..-2] if directories # send to parent and remove . from end
+      remote_path = "#{remote(anime)}#{episode_path}"
+      puts "syncing (#{mode}) #{local_path} to #{remote_path}".indent $indent
+      success = run_shell_command "rsync #{options} #{local_path.shellescape} #{remote_path.shellescape}"
+      success ? $did_work = true : $errors = true
+    end
+    if directories
+      # Root folder
+      local_path = local_anime[0..-2]
+      remote_path = File.dirname(remote(anime))
+      puts "syncing (#{mode}) #{local_path} to #{remote_path}".indent $indent
+      success = run_shell_command "rsync #{options} #{local_path.shellescape} #{remote_path.shellescape}"
+      success ? $did_work = true : $errors = true
+    end
   end
   $indent -= $indent_size
 
