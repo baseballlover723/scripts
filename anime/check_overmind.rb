@@ -430,7 +430,7 @@ end
 
 def analyze_episode(season, episode_name, path, type, line)
   begin
-    return if File.directory? path
+    return if !File.exist?(path) || File.directory?(path)
     print_updating("calculating checksum for #{path}", line)
     data, _cached = $cache.get(path) do
       if Time.now - $cache.last_write_time > CACHE_REFRESH

@@ -425,6 +425,7 @@ TV_EPISODE_REGEX = /S\d\dE\d\d/i
 
 def analyze_episode(season, episode_name, path, location, line)
   begin
+    return unless File.exist?(path)
     human_path = path
     human_path = path.split("/").map { |p| p.match(TV_EPISODE_REGEX) ? p[TV_EPISODE_REGEX] : p }.join("/") if path.match TV_EPISODE_REGEX
     print_updating("calculating checksum for #{human_path}", line)
