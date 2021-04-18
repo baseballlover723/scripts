@@ -37,16 +37,16 @@ if ARGV.empty?
   $cursor = TTY::Cursor
 
   $included = Set.new
-  $included << 'local'
-  $included << 'remote'
-  $included << 'external' if File.directory?(EXTERNAL_PATH)
-  $included << 'long_external' if File.directory?(LONG_EXTERNAL_PATH)
-  puts 'skipping overmind' unless $included.include? 'remote'
-  puts 'skipping external' unless $included.include? 'external'
+  $included << 'local'.freeze
+  $included << 'remote'.freeze
+  $included << 'external'.freeze if File.directory?(EXTERNAL_PATH)
+  $included << 'long_external'.freeze if File.directory?(LONG_EXTERNAL_PATH)
+  puts 'skipping overmind' unless $included.include? 'remote'.freeze
+  puts 'skipping external' unless $included.include? 'external'.freeze
 
   abort("overmind or an external hard drive need to be connected to work") unless ($included.size > 1)
 
-  $updating_lines = $included.dup.delete('remote').size
+  $updating_lines = $included.dup.delete('remote'.freeze).size
 end
 
 class String
@@ -143,7 +143,7 @@ class Episode
   def biggest_size
     biggest_value = 0
     instance_variables.each do |instance_var|
-      next unless instance_var.to_s.end_with?('size')
+      next unless instance_var.to_s.end_with?('size'.freeze)
       value = instance_variable_get instance_var
       biggest_value = value if value > biggest_value
     end
@@ -154,7 +154,7 @@ class Episode
     biggest_instance_vars = []
     biggest_value = 0
     instance_variables.each do |instance_var|
-      next unless instance_var.to_s.end_with?('size')
+      next unless instance_var.to_s.end_with?('size'.freeze)
       value = instance_variable_get instance_var
       if value > biggest_value
         biggest_value = value
@@ -168,26 +168,26 @@ class Episode
 
   def human_sizes
     if sizes_same?
-      checksum_mapping = {'0' => '0'}
+      checksum_mapping = {'0'.freeze => '0'.freeze}
       index = 0
       [@local_checksum.to_s, @remote_checksum.to_s, @external_checksum.to_s, @long_external_checksum.to_s].each do |checksum|
         if checksum_mapping[checksum].nil?
           index += 1
-          checksum_mapping[checksum] = "Checksum ##{index}"
+          checksum_mapping[checksum] = 'Checksum #'.freeze + index.to_s
         end
       end
       checksums = {}
-      checksums[:local] = LocalString.new(checksum_mapping[@local_checksum.to_s]).uncolor if $included.include? 'local'
-      checksums[:remote] = RemoteString.new(checksum_mapping[@remote_checksum.to_s]).uncolor if $included.include? 'remote'
-      checksums[:external] = ExternalString.new(checksum_mapping[@external_checksum.to_s]).uncolor if $included.include? 'external'
-      checksums[:long_external] = LongExternalString.new(checksum_mapping[@long_external_checksum.to_s]).uncolor if $included.include? 'long_external'
+      checksums[:local] = LocalString.new(checksum_mapping[@local_checksum.to_s]).uncolor if $included.include? 'local'.freeze
+      checksums[:remote] = RemoteString.new(checksum_mapping[@remote_checksum.to_s]).uncolor if $included.include? 'remote'.freeze
+      checksums[:external] = ExternalString.new(checksum_mapping[@external_checksum.to_s]).uncolor if $included.include? 'external'.freeze
+      checksums[:long_external] = LongExternalString.new(checksum_mapping[@long_external_checksum.to_s]).uncolor if $included.include? 'long_external'.freeze
       [:checksum, checksums]
     else
       sizes = {}
-      sizes[:local] = LocalString.new(h_size(@local_size)).uncolor if $included.include? 'local'
-      sizes[:remote] = RemoteString.new(h_size(@remote_size)).uncolor if $included.include? 'remote'
-      sizes[:external] = ExternalString.new(h_size(@external_size)).uncolor if $included.include? 'external'
-      sizes[:long_external] = LongExternalString.new(h_size(@long_external_size)).uncolor if $included.include? 'long_external'
+      sizes[:local] = LocalString.new(h_size(@local_size)).uncolor if $included.include? 'local'.freeze
+      sizes[:remote] = RemoteString.new(h_size(@remote_size)).uncolor if $included.include? 'remote'.freeze
+      sizes[:external] = ExternalString.new(h_size(@external_size)).uncolor if $included.include? 'external'.freeze
+      sizes[:long_external] = LongExternalString.new(h_size(@long_external_size)).uncolor if $included.include? 'long_external'.freeze
       [:size, sizes]
     end
   end
@@ -200,35 +200,34 @@ class Episode
     sizes = Set.new
     filtered_types = []
     both_zero = external_size == long_external_size && external_size == 0
-    filtered_types << 'external' if both_zero || (!both_zero && external_size == 0)
-    filtered_types << 'long_external' if both_zero || (!both_zero && long_external_size == 0)
+    filtered_types << 'external'.freeze if both_zero || (!both_zero && external_size == 0)
+    filtered_types << 'long_external'.freeze if both_zero || (!both_zero && long_external_size == 0)
     $included.reject do |type|
       filtered_types.include?(type)
     end.each do |type|
-      sizes << send((type + '_size').to_sym)
+      sizes << send((type + '_size'.freeze).to_sym)
     end
     sizes.size == 1
   end
 
   def to_s
-    name = File.basename(@name, '.*').cyan
-    name = @name.cyan
-    return "#{name}" if defined?(HIDE_LOCAL_ONLY) && HIDE_LOCAL_ONLY && local_size != 0 && remote_size == 0
-    str = "#{name}:"
+    str = @name.cyan
+    return str if defined?(HIDE_LOCAL_ONLY) && HIDE_LOCAL_ONLY && local_size != 0 && remote_size == 0
+    str << ':'.freeze
 
     different_part, human_strs = human_sizes
 
     # count number of times size shows up
     counts = Hash.new(0)
     # 0 is always colored
-    counts['0 Bytes'.uncolor] = human_strs.count * -1 + 1
+    counts['0 Bytes'.freeze] = human_strs.count * -1 + 1
     # must be 2 or more in order to be uncolored
-    counts['min repetitions to color'] = 2
+    counts['min repetitions to color'.freeze] = 2
 
     if different_part == :size
       biggest_size_names.each do |biggest_size_name|
         # drop @, size / checksum and convert to symbol
-        counts[human_strs[biggest_size_name[1..-1].split('_')[0..-2].join('_').to_sym].uncolor] = human_strs.count
+        counts[human_strs[biggest_size_name[1..-1].split('_'.freeze)[0..-2].join('_'.freeze).to_sym].uncolor] = human_strs.count
       end
     end
 
@@ -253,14 +252,14 @@ class Episode
     human_strs[:external] = human_strs[:external].paint if in_both_external?
     human_strs[:long_external] = human_strs[:long_external].paint if in_both_external?
 
-    str << " #{human_strs[:local]}" if human_strs.has_key? :local
-    str << " (#{human_strs[:remote]})" if human_strs.has_key?(:remote)
+    str.concat(' '.freeze, human_strs[:local]) if human_strs.has_key? :local
+    str.concat(' ('.freeze, human_strs[:remote], ')'.freeze) if human_strs.has_key?(:remote)
     both_zero = external_size == long_external_size && external_size == 0
-    # str << " [both]" if both_zero && (sizes.has_key?(:external) || sizes.has_key?(:long_external))
-    str << " [#{human_strs[:external]}]" if both_zero && (human_strs.has_key?(:external) || human_strs.has_key?(:long_external))
-    str << " [#{human_strs[:external]}]" if !both_zero && human_strs.has_key?(:external) && external_size != 0
-    str << ' &' if in_both_external?
-    str << " {#{human_strs[:long_external]}}" if !both_zero && human_strs.has_key?(:long_external) && long_external_size != 0
+    # str << ' [both]'.freeze if both_zero && (sizes.has_key?(:external) || sizes.has_key?(:long_external))
+    str.concat(' ['.freeze, human_strs[:external], ']'.freeze) if both_zero && (human_strs.has_key?(:external) || human_strs.has_key?(:long_external))
+    str.concat(' ['.freeze, human_strs[:external], ']'.freeze) if !both_zero && human_strs.has_key?(:external) && external_size != 0
+    str << ' &'.freeze if in_both_external?
+    str.concat(' {'.freeze, human_strs[:long_external], '}'.freeze) if !both_zero && human_strs.has_key?(:long_external) && long_external_size != 0
     str << @external_size_extra.to_s
     str
   end
@@ -312,7 +311,7 @@ end
 def main
   puts Time.now
   $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
-  if $included.include? 'remote'
+  if $included.include? 'remote'.freeze
     begin
       Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
         ssh.sftp.connect do |sftp|
@@ -324,7 +323,7 @@ def main
         begin
           RESULTS.replace Marshal::load(serialized_results)
         rescue TypeError => e
-          $included.delete? 'remote' # debug?
+          $included.delete? 'remote'.freeze # debug?
           puts 'Error reading results from remote'
           puts serialized_results
         end
@@ -333,7 +332,7 @@ def main
       end
     rescue Errno::EAGAIN => e
       puts 'could not connect to overmind'
-      $included.delete('remote')
+      $included.delete('remote'.freeze)
     end
   end
 
@@ -342,37 +341,37 @@ def main
   current_line = -1
 
   puts
-  if $included.include? 'local'
+  if $included.include? 'local'.freeze
     puts 'running locally'
     current_line += 1
     threads << Thread.new(current_line) do |line|
       print_thread = start_print_thread
-      iterate LOCAL_PATH + '/zWatched', 'local', line
-      iterate LOCAL_PATH, 'local', line
+      iterate LOCAL_PATH + '/zWatched', 'local'.freeze, line
+      iterate LOCAL_PATH, 'local'.freeze, line
       print_thread.exit
       $cache.write
       print_updating("done running local", line, true)
     end
   end
-  if $included.include? 'external'
+  if $included.include? 'external'.freeze
     puts 'running on external'
     current_line += 1
     threads << Thread.new(current_line) do |line|
       print_thread = start_print_thread
-      iterate EXTERNAL_PATH + '/zWatched', 'external', line
-      iterate EXTERNAL_PATH, 'external', line
+      iterate EXTERNAL_PATH + '/zWatched', 'external'.freeze, line
+      iterate EXTERNAL_PATH, 'external'.freeze, line
       print_thread.exit
       $cache.write
       print_updating("done running external", line, true)
     end
   end
-  if $included.include? 'long_external'
+  if $included.include? 'long_external'.freeze
     puts 'running on long external'
     current_line += 1
     threads << Thread.new(current_line) do |line|
       print_thread = start_print_thread
-      iterate LONG_EXTERNAL_PATH + '/zWatched', 'long_external', line
-      iterate LONG_EXTERNAL_PATH, 'long_external', line
+      iterate LONG_EXTERNAL_PATH + '/zWatched', 'long_external'.freeze, line
+      iterate LONG_EXTERNAL_PATH, 'long_external'.freeze, line
       print_thread.exit
       $cache.write
       print_updating("done running long_external", line, true)
@@ -488,7 +487,7 @@ end
 def remote_main
   $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
   REMOTE_PATHS.each do |rp|
-    iterate(rp, 'remote') if File.exist?(rp)
+    iterate(rp, 'remote'.freeze) if File.exist?(rp)
     $cache.write
   end
   puts Marshal::dump(RESULTS)
@@ -526,18 +525,18 @@ def trim_results
         sizes = Set.new
         checksums = Set.new
         included = $included.dup
-        included.delete('external') if episode.external_size != episode.long_external_size && episode.external_size == 0
-        included.delete('long_external') if episode.external_size != episode.long_external_size && episode.long_external_size == 0
+        included.delete('external'.freeze) if episode.external_size != episode.long_external_size && episode.external_size == 0
+        included.delete('long_external'.freeze) if episode.external_size != episode.long_external_size && episode.long_external_size == 0
         included.each do |type|
           sizes << episode.send("#{type}_size")
           checksums << episode.send("#{type}_checksum").to_s
         end
 
         season.episodes.delete(episode.name) if sizes.size == 1 && checksums.size == 1
-        # if sizes.size == 2 && $included.include?('long_external')
+        # if sizes.size == 2 && $included.include?('long_external'.freeze)
         #   non_long_external_sizes = Set.new
         #   $included.each do |type|
-        #     non_long_external_sizes << episode.send("#{type}_size") unless type == 'long_external'
+        #     non_long_external_sizes << episode.send("#{type}_size") unless type == 'long_external'.freeze
         #   end
         season.episodes.delete(episode.name) if sizes.size == 1 && checksums.size == 1 #if non_long_external_sizes.size == 1
         # end
@@ -551,21 +550,21 @@ end
 
 def print_results
   cols = $terminal_size[:width]
-  print LocalString.new("local size").paint if $included.include? 'local'
-  if $included.include? 'remote'
+  print LocalString.new("local size").paint if $included.include? 'local'.freeze
+  if $included.include? 'remote'.freeze
     print " ("
     print RemoteString.new("remote size").paint
     print ")"
   end
-  if $included.include? 'external'
+  if $included.include? 'external'.freeze
     print " ["
     print ExternalString.new("external size").paint
     print "]"
   end
-  if $included.include?('long_external') && $included.include?('external')
+  if $included.include?('long_external'.freeze) && $included.include?('external'.freeze)
     print " |"
   end
-  if $included.include?('long_external')
+  if $included.include?('long_external'.freeze)
     print " {"
     print LongExternalString.new("long external size").paint
     print "}"
@@ -583,18 +582,19 @@ def print_results
       episodes = season.episodes.values.sort_by { |e| e.name.to_f == 0 ? 9999 : e.name.to_f }
       episodes.each do |episode|
         episode_str = episode.to_s
-        if (str + "#{episode_str}, ").uncolorize.length + indent_size < cols
-          str += "#{episode_str}, "
+        if (str + episode_str + ', '.freeze).uncolorize.length + indent_size < cols
+          str << episode_str
+          str << ', '.freeze
         else
           puts str.indent indent_size
-          str = "#{episode_str}, "
+          str = episode_str + ', '.freeze
         end
       end
       puts str.indent indent_size
     end
   end
 
-  if $included.include?('remote') && $included.include?('external')
+  if $included.include?('remote'.freeze) && $included.include?('external'.freeze)
     remote = 0
     external = 0
     local = 0
