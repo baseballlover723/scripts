@@ -16,9 +16,9 @@ HIDE_LOCAL_ONLY = false
 # TODO hide_local_only make extensible so it dosen't only depend on local and remote
 CACHE_PATH = 'check_overminds.cache.json'
 CACHE_REFRESH = 30 # seconds
+PRINT_REFRESH = 1 / 60.0 # seconds
 DIGEST_ALGO = Digest::SHA256
 ANIME_SEMAPHORE = Mutex.new
-PRINT_SEMAPHORE = Mutex.new
 
 if ARGV.empty?
   require 'dotenv/load'
@@ -346,30 +346,36 @@ def main
     puts 'running locally'
     current_line += 1
     threads << Thread.new(current_line) do |line|
+      print_thread = start_print_thread
       iterate LOCAL_PATH + '/zWatched', 'local', line
       iterate LOCAL_PATH, 'local', line
+      print_thread.exit
       $cache.write
-      print_updating("done running local", line)
+      print_updating("done running local", line, true)
     end
   end
   if $included.include? 'external'
     puts 'running on external'
     current_line += 1
     threads << Thread.new(current_line) do |line|
+      print_thread = start_print_thread
       iterate EXTERNAL_PATH + '/zWatched', 'external', line
       iterate EXTERNAL_PATH, 'external', line
+      print_thread.exit
       $cache.write
-      print_updating("done running external", line)
+      print_updating("done running external", line, true)
     end
   end
   if $included.include? 'long_external'
     puts 'running on long external'
     current_line += 1
     threads << Thread.new(current_line) do |line|
+      print_thread = start_print_thread
       iterate LONG_EXTERNAL_PATH + '/zWatched', 'long_external', line
       iterate LONG_EXTERNAL_PATH, 'long_external', line
+      print_thread.exit
       $cache.write
-      print_updating("done running long_external", line)
+      print_updating("done running long_external", line, true)
     end
   end
   threads.each { |thread| thread.join }
@@ -451,9 +457,10 @@ def nested_show?(show)
   nested_shows.include? show
 end
 
-def print_updating(msg, line)
+def print_updating(msg, line, force = false)
   return unless ARGV.empty?
-  PRINT_SEMAPHORE.synchronize do
+  if force || should_print?
+    Thread.current[:should_print] = false
     str = $cursor.save
     ($updating_lines - line).times { str << $cursor.prev_line }
     str << $cursor.clear_line
@@ -462,6 +469,20 @@ def print_updating(msg, line)
     str << $cursor.restore
     print(str)
   end
+end
+
+def start_print_thread
+  thread = Thread.current
+  Thread.new do
+    while true
+      thread[:should_print] = true
+      sleep PRINT_REFRESH
+    end
+  end
+end
+
+def should_print?
+  Thread.current[:should_print]
 end
 
 def remote_main

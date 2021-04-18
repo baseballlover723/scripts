@@ -16,9 +16,9 @@ BLACKLIST = ['anime', 'Naruto', 'Naruto - Copy']
 FILTER = /Naruto/
 CACHE_PATH = 'moviess.cache.json'
 CACHE_REFRESH = 30 # seconds
+PRINT_REFRESH = 1 / 60.0 # seconds
 DIGEST_ALGO = Digest::SHA256
 ANIME_SEMAPHORE = Mutex.new
-PRINT_SEMAPHORE = Mutex.new
 
 if ARGV.empty?
   require 'dotenv/load'
@@ -331,9 +331,11 @@ def main
     current_line += 1
     threads << Thread.new(current_line) do |line|
       LOCAL_PATHES.each do |type, path|
+        print_thread = start_print_thread
         iterate path, 'local', type, line
+        print_thread.exit
         $cache.write
-        print_updating("done running local", line)
+        print_updating("done running local", line, true)
       end
     end
   end
@@ -342,9 +344,11 @@ def main
       puts "running on external (#{type})"
       current_line += 1
       threads << Thread.new(current_line) do |line|
+        print_thread = start_print_thread
         iterate path, 'external', type, line
+        print_thread.exit
         $cache.write
-        print_updating("done running #{path}", line)
+        print_updating("done running #{path}", line, true)
       end
     end
   end
@@ -496,9 +500,10 @@ def nested_folder?(show_name)
   nested_folders.include? show_name
 end
 
-def print_updating(msg, line)
+def print_updating(msg, line, force = false)
   return unless ARGV.empty?
-  PRINT_SEMAPHORE.synchronize do
+  if force || should_print?
+    Thread.current[:should_print] = false
     str = $cursor.save
     ($updating_lines - line).times { str << $cursor.prev_line }
     str << $cursor.clear_line
@@ -507,6 +512,20 @@ def print_updating(msg, line)
     str << $cursor.restore
     print(str)
   end
+end
+
+def start_print_thread
+  thread = Thread.current
+  Thread.new do
+    while true
+      thread[:should_print] = true
+      sleep PRINT_REFRESH
+    end
+  end
+end
+
+def should_print?
+  Thread.current[:should_print]
 end
 
 def remote_main
