@@ -111,16 +111,12 @@ class Episode
 end
 
 class Cache < BaseCache
-  def initialize(cache)
-    super(cache)
+  def initialize(cache, path, update_duration = -1)
+    super(cache, path, update_duration = -1)
   end
 
   def self.load_episode(path, last_modified, payload)
     CacheEpisode.new(path, last_modified, payload)
-  end
-
-  def write(path=CACHE_PATH)
-    super(path)
   end
 end
 

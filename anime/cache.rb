@@ -16,15 +16,20 @@ end
 class BaseCache
   LAST_MODIFIED_KEY = 'last_modified'.freeze
 
-  attr_accessor :cache, :last_write_time
+  attr_accessor :cache, :path, :update_duration, :last_write_time, :modified_cache, :update_semaphore, :write_semaphore
 
-  def initialize(cache)
+  def initialize(cache, path, update_duration = -1)
     @cache = cache
+    @path = path
+    @update_duration = update_duration
+    @modified_cache = false
     @last_write_time = Time.now
+    @update_semaphore = Mutex.new
+    @write_semaphore = Mutex.new
   end
 
-  def self.load(path)
-    return self.new({}) unless File.exist?(path)
+  def self.load(path, update_duration = -1)
+    return self.new({}, path, update_duration) unless File.exist?(path)
     json = JSON.parse(File.read(path))
     cache = {}
 
@@ -33,12 +38,17 @@ class BaseCache
       cache[path] = load_episode(path, last_modified, payload)
     end
 
-    self.new(cache)
+    self.new(cache, path, update_duration)
   end
 
-  def write(path)
-    sorted_cache = cache.sort_by {|path, _obj| path}.to_h
-    File.write(path, JSON.generate(sorted_cache))
+  def write
+    if @modified_cache
+      @write_semaphore.synchronize do
+        @modified_cache = false
+        sorted_cache = cache.sort_by { |path, _obj| path }.to_h
+        File.write(@path, JSON.generate(sorted_cache))
+      end
+    end
     @last_write_time = Time.now
   end
 
@@ -59,6 +69,10 @@ class BaseCache
     new_payload = block.call()
     cached.payload = new_payload
     cached.last_modified = new_modified_time
+    @modified_cache = true
+    if @update_duration != -1 && Time.now - @last_write_time > @update_duration
+      @update_semaphore.synchronize { write if Time.now - @last_write_time > @update_duration }
+    end
 
     [new_payload, false]
   end
@@ -73,7 +87,7 @@ class BaseCachePayload
     @payload = payload
   end
 
-  def as_json(options={})
+  def as_json(options = {})
     {last_modified: last_modified}
   end
 

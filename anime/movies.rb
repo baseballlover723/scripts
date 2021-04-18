@@ -18,7 +18,6 @@ CACHE_PATH = 'moviess.cache.json'
 CACHE_REFRESH = 30 # seconds
 DIGEST_ALGO = Digest::SHA256
 ANIME_SEMAPHORE = Mutex.new
-CACHE_SEMAPHORE = Mutex.new
 PRINT_SEMAPHORE = Mutex.new
 
 if ARGV.empty?
@@ -253,16 +252,12 @@ class Episode
 end
 
 class Cache < BaseCache
-  def initialize(cache)
-    super(cache)
+  def initialize(cache, path, update_duration = -1)
+    super(cache, path, update_duration = -1)
   end
 
   def self.load_episode(path, last_modified, payload)
     CacheEpisode.new(path, last_modified, payload)
-  end
-
-  def write(path = CACHE_PATH)
-    super(path)
   end
 end
 
@@ -301,7 +296,7 @@ end
 
 def main
   puts Time.now
-  $cache = Cache.load(CACHE_PATH)
+  $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
   if $included.include? 'remote'
     begin
       Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
@@ -337,7 +332,7 @@ def main
     threads << Thread.new(current_line) do |line|
       LOCAL_PATHES.each do |type, path|
         iterate path, 'local', type, line
-        CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) }
+        $cache.write
         print_updating("done running local", line)
       end
     end
@@ -348,7 +343,7 @@ def main
       current_line += 1
       threads << Thread.new(current_line) do |line|
         iterate path, 'external', type, line
-        CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) }
+        $cache.write
         print_updating("done running #{path}", line)
       end
     end
@@ -436,9 +431,6 @@ def analyze_episode(season, episode_name, path, location, line)
       data = {CHECKSUM_KEY => checksum, SIZE_KEY => file_size}
     else
       data, _cached = $cache.get(path) do
-        if Time.now - $cache.last_write_time > CACHE_REFRESH
-          CACHE_SEMAPHORE.synchronize { $cache.write(CACHE_PATH) if Time.now - $cache.last_write_time > CACHE_REFRESH }
-        end
         file_size = File.size(path)
         if (file_size == 0) # so
           file_size = 1
@@ -518,10 +510,10 @@ def print_updating(msg, line)
 end
 
 def remote_main
-  $cache = Cache.load(CACHE_PATH)
+  $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
   REMOTE_PATHES.each do |type, path|
     iterate(path, 'remote', type)
-    $cache.write(CACHE_PATH)
+    $cache.write
   end
   puts Marshal::dump(RESULTS)
 end
