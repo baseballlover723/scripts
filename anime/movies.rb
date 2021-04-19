@@ -434,6 +434,7 @@ def analyze_episode(season, episode_name, path, location, line)
       data = {CHECKSUM_KEY => checksum, SIZE_KEY => file_size}
     else
       data, _cached = $cache.get(path) do
+        print_updating("calculating checksum for #{path}", line, true)
         file_size = File.size(path)
         if (file_size == 0) # so
           file_size = 1
@@ -666,7 +667,7 @@ class ShowGroup
   def print
     indent(ignore? ? 0 : 2) do
       puts name.indent($indent_size) unless ignore?
-      shows.each_value &:print
+      shows.values.sort_by { |sg| sg.name }.each &:print
     end
   end
 end
@@ -675,7 +676,7 @@ class Show
   def print
     indent do
       puts name.indent $indent_size
-      @seasons.each_value &:print
+      @seasons.values.sort_by { |s| s.name }.each &:print
     end
   end
 end

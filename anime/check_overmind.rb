@@ -433,6 +433,7 @@ def analyze_episode(season, episode_name, path, type, line)
     return if !File.exist?(path) || File.directory?(path)
     print_updating("calculating checksum for #{path}", line)
     data, _cached = $cache.get(path) do
+      print_updating("calculating checksum for #{path}", line, true)
       file_size = File.size(path)
       if (file_size == 0) # so
         file_size = 1
@@ -575,7 +576,8 @@ def print_results
   shows = RESULTS.values.sort_by(&:name).reverse
   shows.each do |show|
     puts show.name
-    show.seasons.each_value do |season|
+    seasons = show.seasons.values.sort_by { |s| s.name }
+    seasons.each do |season|
       puts season.name.indent 4 unless season.name == 'root'
       indent_size = season.name == 'root' ? 4 : 8
       str = ''
