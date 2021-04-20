@@ -417,12 +417,12 @@ def analyze_show(show, path, type, line)
   end
 end
 
-def analyze_season(season, path, type, line)
+def analyze_season(season, path, type, line, prefix='')
   begin
     entries = Dir.entries path, **OPTS
     entries.sort.each do |entry|
       next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-      analyze_episode season, entry, path + '/' + entry, type, line
+      analyze_episode season, prefix + entry, path + '/' + entry, type, line
     end
   rescue Errno::EACCES => _
   end
@@ -430,7 +430,10 @@ end
 
 def analyze_episode(season, episode_name, path, type, line)
   begin
-    return if !File.exist?(path) || File.directory?(path)
+    return unless File.exist?(path)
+    # recurse for directories from here on out
+    analyze_season(season, path, type, line, episode_name + '/') and return if File.directory?(path)
+
     print_updating("calculating checksum for #{path}", line)
     data, _cached = $cache.get(path) do
       print_updating("calculating checksum for #{path}", line, true)

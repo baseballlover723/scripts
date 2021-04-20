@@ -408,12 +408,12 @@ def analyze_show(show_group, show_name, path, location, type, line)
   end
 end
 
-def analyze_season(season, path, location, line)
+def analyze_season(season, path, location, line, prefix = '')
   begin
     entries = Dir.entries path, **OPTS
     entries.sort.each do |entry|
       next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
-      analyze_episode season, entry, path + '/' + entry, location, line
+      analyze_episode season, prefix + entry, path + '/' + entry, location, line
     end
   rescue Errno::EACCES => _
   end
@@ -424,23 +424,20 @@ TV_EPISODE_REGEX = /S\d\dE\d\d/i
 def analyze_episode(season, episode_name, path, location, line)
   begin
     return unless File.exist?(path)
+    # recurse for directories from here on out
+    analyze_season(season, path, location, line, episode_name + '/') and return if File.directory?(path)
+
     human_path = path
     human_path = path.split("/").map { |p| p.match(TV_EPISODE_REGEX) ? p[TV_EPISODE_REGEX] : p }.join("/") if path.match TV_EPISODE_REGEX
     print_updating("calculating checksum for #{human_path}", line)
-    if File.directory?(path)
-      # never cache nested folders, since the modified time isn't reliable
-      file_size = directory_size(path)
-      checksum = directory_checksum(path)
-      data = {CHECKSUM_KEY => checksum, SIZE_KEY => file_size}
-    else
-      data, _cached = $cache.get(path) do
-        print_updating("calculating checksum for #{path}", line, true)
-        file_size = File.size(path)
-        if (file_size == 0) # so
-          file_size = 1
-        end
-        {CHECKSUM_KEY => DIGEST_ALGO.file(path).to_s, SIZE_KEY => file_size}
+
+    data, _cached = $cache.get(path) do
+      print_updating("calculating checksum for #{human_path}", line, true)
+      file_size = File.size(path)
+      if (file_size == 0) # so
+        file_size = 1
       end
+      {CHECKSUM_KEY => DIGEST_ALGO.file(path).to_s, SIZE_KEY => file_size}
     end
     # return unless episode_name.end_with? *MOVIE_EXTENSIONS
     episode_name.chomp!('.filepart')
