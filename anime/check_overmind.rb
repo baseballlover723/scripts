@@ -267,7 +267,7 @@ end
 
 class Cache < BaseCache
   def initialize(cache, path, update_duration = -1)
-    super(cache, path, update_duration = -1)
+    super(cache, path, update_duration)
   end
 
   def self.load_episode(path, last_modified, payload)
