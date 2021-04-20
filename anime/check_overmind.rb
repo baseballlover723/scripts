@@ -383,7 +383,7 @@ end
 def iterate(path, type, line = 0)
   shows = Dir.entries path, **OPTS
   count = 0
-  shows.each do |show|
+  shows.sort.each do |show|
     next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini'
     count += 1
     # break if count > 5 # DEBUG
@@ -401,7 +401,7 @@ def analyze_show(show, path, type, line)
     end
     root_season = find_season anime, 'root'
     entries = Dir.entries path, **OPTS
-    entries.each do |entry|
+    entries.sort.each do |entry|
       next if entry == '.' || entry == '..' || entry == 'desktop.ini' # || entry.end_with?('.txt')
       analyze_show(entry, path + '/' + entry, type, line) and next if nested_show? entry
       if File.directory?("#{path}/#{entry}")
@@ -420,7 +420,7 @@ end
 def analyze_season(season, path, type, line)
   begin
     entries = Dir.entries path, **OPTS
-    entries.each do |entry|
+    entries.sort.each do |entry|
       next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
       analyze_episode season, entry, path + '/' + entry, type, line
     end

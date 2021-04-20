@@ -357,7 +357,7 @@ end
 def iterate(path, location, type, line = 0)
   shows = Dir.entries path, **OPTS
   count = 0
-  shows.each do |show_name|
+  shows.sort.each do |show_name|
     next if show_name == '.' || show_name == '..' || show_name == 'zWatched' || show_name == 'desktop.ini'
     next unless File.directory? path + '/' + show_name
     next if BLACKLIST.include? show_name
@@ -378,7 +378,7 @@ def analyze_show_group(name, path, location, type, line)
     end
 
     entries = Dir.entries path, **OPTS
-    entries.each do |entry|
+    entries.sort.each do |entry|
       next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
       analyze_show show_group, entry, path + '/' + entry, location, type, line
     end
