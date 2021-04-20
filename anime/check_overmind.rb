@@ -581,7 +581,7 @@ def print_results
       puts season.name.indent 4 unless season.name == 'root'
       indent_size = season.name == 'root' ? 4 : 8
       str = ''
-      episodes = season.episodes.values.sort_by { |e| e.name.to_f == 0 ? 9999 : e.name.to_f }
+      episodes = season.episodes.values.sort_by { |e| episode_sort(e)}
       episodes.each do |episode|
         episode_str = episode.to_s
         if (str + episode_str + ', '.freeze).uncolorize.length + indent_size < cols
@@ -619,6 +619,23 @@ def print_results
     est = (transfer_amount) / (1024 * kilobytes_per_sec)
     puts "Need to transfer #{transfer.light_cyan}: EST: #{to_human_duration(est).light_cyan} (#{kilobytes_per_sec} KB/s)"
   end
+end
+
+def episode_sort(episode)
+  if is_digit?(episode.name[0])
+    # is a number
+    [episode.name.to_f]
+  else
+    # sort by level of nesting and then by string sorting
+    [9999, episode.name.count("/".freeze), episode.name]
+  end
+end
+
+def is_digit?(s)
+  code = s.ord
+  # 48 is ASCII code of 0
+  # 57 is ASCII code of 9
+  48 <= code && code <= 57
 end
 
 def to_human_duration(time)

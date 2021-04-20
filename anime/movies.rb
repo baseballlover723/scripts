@@ -687,7 +687,7 @@ class Season
       puts name.indent $indent_size unless name == 'root'
       indent(4) do
         str = ''
-        episodes = @episodes.values.sort_by { |e| e.name.to_f == 0 ? 9999 : e.name.to_f }
+        episodes = @episodes.values.sort_by { |e| [e.name.count("/".freeze), e.name] }
         episodes.each do |episode|
           episode_str = episode.to_s
           if (str + "#{episode_str}, ").uncolorize.length + $indent_size < $cols
