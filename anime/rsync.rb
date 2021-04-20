@@ -47,6 +47,8 @@ def main
     if defined? ANIME_NAME
       rsync_animes([ANIME_NAME])
     else
+      puts "running overmind"
+      puts `ruby check_overmind.rb`
       iterate_anime_files("dirty_animes_*.txt")
     end
   end
@@ -71,7 +73,7 @@ def move_mode_forwards(path)
     errors = []
     errors << "didn't do work" if !$did_work
     errors << "had rsync errors" if $errors
-    raise "Stopping because we #{errors.join(' and ')} on the anime file: #{path}"
+    double_bell and raise "Stopping because we #{errors.join(' and ')} on the anime file: #{path}"
   end
   $did_work = false
   $errors = false
@@ -138,6 +140,9 @@ def rsync_animes(animes, mode = MODES.first, path = nil)
     end
     mode = (path ? move_mode_forwards(path) : calc_next_mode(mode))
     print "\a"
+    puts "running overmind"
+    puts `ruby check_overmind.rb`
+    print "\a"
   end
   $indent -= $indent_size
 end
@@ -166,6 +171,7 @@ def rsync_anime(anime, mode, index_str = '')
       success = run_shell_command "rsync #{options} #{local_path.shellescape} #{remote_path.shellescape}"
       success ? $did_work = true : $errors = true
     end
+    double_bell and raise "Stopping because we had rsync errors on the anime: #{anime}" if $errors
   end
   $indent -= $indent_size
 
@@ -195,6 +201,13 @@ end
 
 def escape_glob(s)
   s.gsub(/[\\\{\}\[\]\*\?]/) { |x| "\\" + x }
+end
+
+def double_bell
+  print "\a"
+  sleep 0.4
+  print "\a"
+  true
 end
 
 main
