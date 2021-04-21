@@ -262,6 +262,7 @@ def yes_no_or_split(prompt = 'Continue?', default = true)
     $VERBOSE = nil
     a = ask("#{prompt} #{s} ") { |q| q.limit = 1; q.case = :downcase }
     $VERBOSE = original_verbosity
+    exit 130 if a == "\cC" # handle ctrl c
     a = d if a.length == 0
     raise Exception.new('canceled program') if a.ord == 3
   end
