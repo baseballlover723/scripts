@@ -10,7 +10,7 @@ if ARGV.empty?
 end
 
 class BaseScript
-  attr_accessor :opts, :analyze_show, :analyze_season, :analyze_episode, :results, :location, :start_time
+  attr_accessor :opts, :analyze_show, :analyze_season, :analyze_episode, :results, :location, :iterate_movies, :start_time
 
   def initialize(results = {})
     @opts = {encoding: 'UTF-8'}
@@ -84,6 +84,7 @@ class BaseScript
 
   def iterate(path)
     @location = calc_location(path)
+    @iterate_movies = calc_movies(path)
     puts "running on #{@location}" if local?
     iterate_shows path
     @results
@@ -104,24 +105,38 @@ class BaseScript
     end
   end
 
+  def calc_movies(path)
+    path.match /^\/mnt\/[eh]/
+  end
+
+  def show_group?(name)
+    # matches (####) [####.]
+    !name.match /\(\d{4}\) \[\d+.\]/
+  end
+
   def iterate_shows(path)
+    return unless File.directory?(path) # TODO shouldn't need this to stop recursing in non show directories
     count = 0
     Dir.foreach path, **@opts do |show_name|
-      next if show_name == '.' || show_name == '..' || show_name == 'zWatched' || show_name == 'desktop.ini'
+      next if show_name == '.' || show_name == '..' || show_name == 'zWatched' || show_name == 'desktop.ini' || show_name == 'format.txt'
       # next unless show.start_with?
+      count += 1
 
       show_path = path + '/' + show_name
-      show = find_show(show_name, show_path)
-      iterate_seasons show, show_path
-      analyze_show(show, show_path) if analyze_show?
-      count += 1
+      if @iterate_movies && show_group?(show_name)
+        iterate_shows(path + '/' + show_name)
+      else
+        show = find_show(show_name, show_path)
+        iterate_seasons show, show_path if analyze_season?
+        analyze_show(show, show_path) if analyze_show?
+      end
       # break if count > 20
     end
   end
 
   def iterate_seasons(show, path)
     root_season = find_season show, 'root', path
-    iterate_episodes root_season, path
+    iterate_episodes root_season, path if analyze_episode?
     if root_season.episodes.empty?
       show.seasons.delete(root_season.name)
     else
@@ -134,7 +149,7 @@ class BaseScript
       next unless File.directory?(season_path)
 
       season = find_season(show, season_name, season_path)
-      iterate_episodes season, season_path
+      iterate_episodes season, season_path if analyze_episode?
       analyze_season(season, season_path) if analyze_season?
     end
   end
