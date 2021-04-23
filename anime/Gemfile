@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 source "https://rubygems.org"
 
-ruby '~> 2.7.2'
+ruby '~> 2.7.3'
 # git_source(:github) {|repo_name| "https://github.com/#{repo_name}" }
 
 gem 'dotenv', '~> 2.7'
@@ -22,3 +22,4 @@ gem 'concurrent-ruby-ext', '~> 1.1'
 gem 'json', '~> 2.5'
 gem 'terminal-size', '~> 0.0.6'
 gem 'tty-cursor', '~> 0.7.1'
+gem 'benchmark-ips', '~> 2.8'
