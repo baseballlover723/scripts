@@ -50,6 +50,27 @@ class GCSuite
   end
 end
 
+class Digest::Class
+  def self.file_mib(name, *args)
+    new(*args).file_mib(name)
+  end
+end
+
+module Digest::Instance
+  # Updates the digest with the contents of a given file _name_ and
+  # returns self.
+  def file_mib(name)
+    File.open(name, "rb") { |f|
+      buf = ""
+      len = 1024 * 1024
+      while f.read(len, buf)
+        update buf
+      end
+    }
+    self
+  end
+end
+
 def main(dry_run)
   begin
     # clean_output
@@ -112,8 +133,8 @@ def run_benchmark(benchmark_data, iter_str, benchmarks_left)
   runtime = benchmark_data.runtime
   warmup = benchmark_data.warmup
   drive = benchmark_data.drive
+  human_size = h_size(benchmark_data.size)
 
-  human_size = h_size(size)
   estimated_runs = estimate_runs(size, runtime)
   current_runtime = estimated_time_left([benchmarks_left.first])
   runtime_left = estimated_time_left(benchmarks_left)
@@ -142,7 +163,8 @@ def run_benchmark(benchmark_data, iter_str, benchmarks_left)
     longest_algo = DIGEST_ALGOS.map { |algo| algo.to_s.split("::").last.size }.max
 
     DIGEST_ALGOS.each do |algo|
-      x.report("#{drive.upcase}: #{human_size} #{algo.to_s.split("::").last.rjust(longest_algo)}") { algo.file(path) }
+      x.report("#{drive.upcase}: #{human_size} #{algo.to_s.split("::").last.rjust(longest_algo)} O") { algo.file(path) }
+      # x.report("#{drive.upcase}: #{human_size} #{algo.to_s.split("::").last.rjust(longest_algo)} M") { algo.file_mib(path) }
     end
     # Compare the iterations per second of the various reports!
     x.compare!
