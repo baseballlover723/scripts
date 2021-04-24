@@ -28,6 +28,28 @@ TIME_FORMAT = "%D %r"
 
 BenchmarkData = Struct.new(:path, :size, :runtime, :warmup, :drive)
 
+class GCSuite
+  def warming(*)
+    run_gc
+  end
+
+  def running(*)
+    run_gc
+  end
+
+  def warmup_stats(*) end
+
+  def add_report(*) end
+
+  private
+
+  def run_gc
+    GC.enable
+    GC.start
+    GC.disable
+  end
+end
+
 def main(dry_run)
   begin
     # clean_output
@@ -72,13 +94,14 @@ def write_output(report, drive)
     report.run_comparison
   end
   print output
-  File.open("benchmark_checksum.#{drive}.log", "a") do |f|
+  File.open("benchmark_checksums.#{drive}.log", "a") do |f|
     f << output
   end
 end
 
 def clean_output
-  Dir.glob("benchmark_checksum.*.log").each do |f|
+  puts "cleaning previous run data"
+  Dir.glob("benchmark_checksums.*.log").each do |f|
     File.delete(f)
   end
 end
@@ -112,6 +135,7 @@ def run_benchmark(benchmark_data, iter_str, benchmarks_left)
   end
 
   Benchmark.ips do |x|
+    x.config(suite: GCSuite.new)
     x.time = runtime
     x.warmup = warmup
 
@@ -171,7 +195,7 @@ def create_files(paths, sizes, dry_run)
           puts "done copying #{path}"
         end
         drive = path.split("/")[2]
-        drive = "linux" if drive.size != 1
+        drive = "wsl" if drive.size != 1
         BenchmarkData.new(path, size, runtime, warmup, drive)
       end
     end.map(&:value)
