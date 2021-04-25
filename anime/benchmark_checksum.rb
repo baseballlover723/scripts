@@ -5,6 +5,7 @@ require 'active_support'
 require 'active_support/number_helper'
 require "active_support/core_ext/numeric/bytes"
 require 'fileutils'
+require 'json'
 require 'optparse'
 require 'securerandom'
 require 'tempfile'
@@ -25,6 +26,7 @@ SOFT_THRESHOLD = 10 * 60 # minutes
 SOFT_MULTIPLIER = 1.5
 THRESHOLD = 15 * 60 # minutes
 TIME_FORMAT = "%D %r"
+PROGRESS_PATH = "benchmark_checksums.progress.json"
 
 BenchmarkData = Struct.new(:path, :size, :runtime, :warmup, :drive)
 
@@ -71,15 +73,15 @@ module Digest::Instance
   end
 end
 
-def main(dry_run)
+def main(dry_run, clean)
   begin
-    # clean_output
-    paths = create_files(PATHS, SIZES, dry_run)
+    clean_output if clean
+    progress = load_progress(PROGRESS_PATH)
+    remaining_benchmarks, progress = create_files(progress, PATHS, SIZES, dry_run)
+    write_progress(progress, PROGRESS_PATH)
     puts "\ndone creating files\n\n"
 
-    all_benchmarks = paths.flatten
-
-    runtime_left = estimated_time_left(all_benchmarks)
+    runtime_left = estimated_time_left(remaining_benchmarks)
     now = Time.now
     puts "total runtime left       : #{to_human_duration runtime_left}"
     puts "total ETA                : #{(now + runtime_left).strftime(TIME_FORMAT)}"
@@ -89,14 +91,13 @@ def main(dry_run)
     end
 
     i = 0
-    reports = paths.flat_map do |sub_paths|
-      reports = sub_paths.map do |benchmark_data|
-        i += 1
-        report = run_benchmark(benchmark_data, "#{i}/#{all_benchmarks.size}", all_benchmarks[(i - 1)..-1])
-        write_output(report, benchmark_data.drive)
-        report
-      end
-      reports
+    reports = remaining_benchmarks.map do |benchmark_data|
+      i += 1
+      progress = save_progress(progress, PROGRESS_PATH, benchmark_data, 'running')
+      report = run_benchmark(benchmark_data, "#{i}/#{remaining_benchmarks.size}", remaining_benchmarks[(i - 1)..-1])
+      write_output(report, benchmark_data.drive)
+      progress = save_progress(progress, PROGRESS_PATH, benchmark_data, 'done')
+      report
     end
     puts "\n*******************\n\n"
     puts "time is currently: #{Time.now.strftime(TIME_FORMAT)}"
@@ -107,23 +108,6 @@ def main(dry_run)
 
   ensure
     clean_up_files(PATHS)
-  end
-end
-
-def write_output(report, drive)
-  output = with_captured_stdout do
-    report.run_comparison
-  end
-  print output
-  File.open("benchmark_checksums.#{drive}.log", "a") do |f|
-    f << output
-  end
-end
-
-def clean_output
-  puts "cleaning previous run data"
-  Dir.glob("benchmark_checksums.*.log").each do |f|
-    File.delete(f)
   end
 end
 
@@ -199,34 +183,68 @@ def estimated_time_left(paths)
   end.sum
 end
 
-def create_files(paths, sizes, dry_run)
-  clean_up_files(paths)
-  paths.each { |path| Dir.mkdir(path) }
-
-  sizes.map do |size|
-    tmp_file = write_master_file(size, dry_run)
-
-    paths.map do |path|
-      path = File.join(path, h_size(size) + '.data').freeze
-      runtime = calc_runtime(size)
-      warmup = (runtime / 60.0).ceil
-      Thread.new(tmp_file, path, runtime, warmup) do |tmp_file, path|
-        if !dry_run
-          puts "copying master file (#{h_size(size)}) to path: #{path}"
-          FileUtils.cp(tmp_file.path, path)
-          puts "done copying #{path}"
-        end
-        drive = path.split("/")[2]
-        drive = "wsl" if drive.size != 1
-        BenchmarkData.new(path, size, runtime, warmup, drive)
-      end
-    end.map(&:value)
+def load_progress(path)
+  if File.exist?(path)
+    JSON.parse(File.read(path))
+  else
+    {}
   end
 end
 
-def write_master_file(size, dry_run)
+def save_progress(progress, progress_path, benchmark_data, new_state)
+  progress[benchmark_data.path] = new_state
+  write_progress(progress, progress_path)
+  progress
+end
+
+def write_progress(progress, progress_path)
+  sorted_progress = progress.sort_by { |path, _obj| path }.to_h
+  File.write(progress_path, JSON.generate(sorted_progress))
+end
+
+def has_already_run?(progress, benchmark_data)
+  progress[benchmark_data.path] == 'done'
+end
+
+def create_files(progress, paths, sizes, dry_run)
+  clean_up_files(paths)
+  paths.each { |path| Dir.mkdir(path) }
+
+  grouped_benchmarks = sizes.map do |size|
+    benchmarks = paths.map do |path|
+      path = File.join(path, h_size(size) + '.data').freeze
+      progress[path] = 'unstarted' unless progress.has_key?(path)
+      runtime = calc_runtime(size)
+      warmup = (runtime / 60.0).ceil
+      drive = path.split("/")[2]
+      drive = "wsl" if drive.size != 1
+      BenchmarkData.new(path, size, runtime, warmup, drive)
+    end
+
+    [size, benchmarks]
+  end
+
+  all_benchmarks = grouped_benchmarks.flat_map do |size, benchmarks|
+    remaining_benchmarks = benchmarks.reject { |benchmark_data| has_already_run?(progress, benchmark_data) }
+    if !dry_run && !remaining_benchmarks.empty?
+      tmp_file = write_master_file(size)
+      remaining_benchmarks = remaining_benchmarks.map do |benchmark_data|
+        Thread.new(tmp_file, benchmark_data) do |tmp_file, benchmark_data|
+          puts "copying master file (#{h_size(benchmark_data.size)}) to path: #{benchmark_data.path}"
+          FileUtils.cp(tmp_file.path, benchmark_data.path)
+          puts "done copying #{benchmark_data.path}"
+          benchmark_data
+        end
+      end.map(&:value)
+    end
+    remaining_benchmarks
+  end
+
+  [all_benchmarks, progress]
+end
+
+def write_master_file(size)
   tmp_file = Tempfile.new('master_bytes')
-  return tmp_file if dry_run
   puts "writing to path: #{tmp_file.path} with #{h_size(size)} of random data"
   chunk = 1.megabyte
   times = size / chunk
@@ -244,6 +262,24 @@ def clean_up_files(paths)
       FileUtils.rm_rf(path)
       puts "deleted #{path}"
     end
+  end
+end
+
+def write_output(report, drive)
+  output = with_captured_stdout do
+    report.run_comparison
+  end
+  print output
+  File.open("benchmark_checksums.#{drive}.log", "a") do |f|
+    f << output
+  end
+end
+
+def clean_output
+  puts "cleaning previous run data"
+  File.delete(PROGRESS_PATH) if File.exist?(PROGRESS_PATH)
+  Dir.glob("benchmark_checksums.*.log").each do |f|
+    File.delete(f)
   end
 end
 
@@ -273,13 +309,16 @@ def to_human_duration(time)
   str.reverse.sub(" ,", " and ".reverse).reverse
 end
 
-options = {dry_run: true}
+options = {dry_run: true, clean: false}
 OptionParser.new do |opts|
   opts.banner = 'Usage: example.rb [options] -f'
 
   opts.on('-f', '--force', 'Actually run the benchmarks') do |dry_run|
     options[:dry_run] = !dry_run
   end
+  opts.on('-c', '--clean', "Don't use existing benchmark data") do |clean|
+    options[:clean] = !!clean
+  end
 end.parse!
 
-main(options[:dry_run])
+main(options[:dry_run], options[:clean])
