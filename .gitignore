@@ -40,6 +40,8 @@ build/
 .project
 /anime/.env
 /anime/*.cache*
+/anime/*.progress*
+/anime/bin
 *.log
 *.xlsx
 *.csv
