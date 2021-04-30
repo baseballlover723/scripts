@@ -3,11 +3,12 @@ require_relative './cache'
 
 REMOTE = !ARGV.empty?
 # LOCAL_PATH = '/mnt/c/Users/Philip Ross/Downloads'
-LOCAL_PATHES = {movies: '/mnt/e/movies', tv: '/mnt/e/tv'}
-EXTERNAL_PATHES = {movies: '/mnt/h/movies', tv: '/mnt/i/tv'}
-# EXTERNAL_PATHES = {movies: '/mnt/e/movies'}
-REMOTE_PATHS = {movies: 'entertainment/movies', tv: '/entertainment/tv'}
-# REMOTE_PATHES = {movies: '../../entertainment/movies'}
+LOCAL_PATHS = {movies: '/mnt/e/movies', tv: '/mnt/e/tv'}
+EXTERNAL_PATHS = {movies: '/mnt/h/movies', tv: '/mnt/i/tv'}
+# EXTERNAL_PATHS = {movies: '/mnt/e/movies'}
+# REMOTE_PATHS = {movies: '/entertainment/movies', tv: '/entertainment/tv'}
+REMOTE_PATHS = {movies: '/entertainment/movies', tv: '/raided/temp_tv'}
+# REMOTE_PATHS = {movies: '../../entertainment/movies'}
 OPTS = {encoding: 'UTF-8'}
 RESULTS = {movies: {}, tv: {}}
 MOVIE_EXTENSIONS = ['.mkv', '.mp4', '.m4v', '.srt', '.avi']
@@ -18,7 +19,7 @@ CACHE_PATH = 'moviess.cache.json'
 CACHE_REFRESH = 30 # seconds
 PRINT_REFRESH = 1 / 60.0 # seconds
 DIGEST_ALGO = Digest::SHA256
-ANIME_SEMAPHORE = Mutex.new
+SHOW_SEMAPHORE = Mutex.new
 
 if ARGV.empty?
   require 'dotenv/load'
@@ -37,9 +38,9 @@ if ARGV.empty?
   $cursor = TTY::Cursor
 
   $included = Set.new
-  # $included << 'remote'.freeze
-  $included << 'local'.freeze if File.directory? LOCAL_PATHES.values.first
-  $included << 'external'.freeze if File.directory? EXTERNAL_PATHES.values.first
+  $included << 'remote'.freeze
+  $included << 'local'.freeze if File.directory? LOCAL_PATHS.values.first
+  $included << 'external'.freeze if File.directory? EXTERNAL_PATHS.values.first
   puts 'skipping overmind' unless $included.include? 'remote'.freeze
   puts 'skipping local' unless $included.include? 'local'.freeze
   puts 'skipping external' unless $included.include? 'external'.freeze
@@ -329,7 +330,7 @@ def main
     puts 'running on local'
     current_line += 1
     threads << Thread.new(current_line) do |line|
-      LOCAL_PATHES.each do |type, path|
+      LOCAL_PATHS.each do |type, path|
         print_thread = start_print_thread
         iterate path, 'local'.freeze, type, line
         print_thread.exit
@@ -339,7 +340,7 @@ def main
     end
   end
   if $included.include? 'external'.freeze
-    EXTERNAL_PATHES.each do |type, path|
+    EXTERNAL_PATHS.each do |type, path|
       puts "running on external (#{type})"
       current_line += 1
       threads << Thread.new(current_line) do |line|
@@ -362,10 +363,11 @@ def iterate(path, location, type, line = 0)
     next unless File.directory? path + '/' + show_name
     next if BLACKLIST.include? show_name
     next if show_name[FILTER]
+    count += 1
+    break if count > 2
+    next unless show_name < 'BBC'
     # next unless show.start_with?('C')
     analyze_show_group show_name, path + '/' + show_name, location, type, line
-    count += 1
-    # break if count > 2
   end
 end
 
@@ -527,7 +529,7 @@ end
 
 def remote_main
   $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
-  REMOTE_PATHES.each do |type, path|
+  REMOTE_PATHS.each do |type, path|
     iterate(path, 'remote'.freeze, type)
     $cache.write
   end
@@ -535,13 +537,15 @@ def remote_main
 end
 
 def find_show_group(show_group_name, type)
-  # if type == :local
-  #   type = :movies if RESULTS[:movies].include? show_group_name
-  #   type = :tv if RESULTS[:tv].include? show_group_name
-  # end
-  show_group = RESULTS[type][show_group_name] || ShowGroup.new(show_group_name, (type != :movies) || !show_group?(show_group_name))
-  RESULTS[type][show_group.name] = show_group
-  show_group
+  SHOW_SEMAPHORE.synchronize do
+    # if type == :local
+    #   type = :movies if RESULTS[:movies].include? show_group_name
+    #   type = :tv if RESULTS[:tv].include? show_group_name
+    # end
+    show_group = RESULTS[type][show_group_name] || ShowGroup.new(show_group_name, (type != :movies) || !show_group?(show_group_name))
+    RESULTS[type][show_group.name] = show_group
+    show_group
+  end
 end
 
 def find_show(show_group, name)
