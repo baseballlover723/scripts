@@ -2,6 +2,9 @@ require 'digest'
 require_relative './cache'
 
 REMOTE = !ARGV.empty?
+SKIP = []
+# SKIP = [:movies]
+# SKIP = [:tv]
 # LOCAL_PATH = '/mnt/c/Users/Philip Ross/Downloads'
 LOCAL_PATHS = {movies: '/mnt/e/movies', tv: '/mnt/e/tv'}
 EXTERNAL_PATHS = {movies: '/mnt/h/movies', tv: '/mnt/i/tv'}
@@ -330,7 +333,7 @@ def main
     puts 'running on local'
     current_line += 1
     threads << Thread.new(current_line) do |line|
-      LOCAL_PATHS.each do |type, path|
+      LOCAL_PATHS.reject{|type, _path| SKIP.include?(type) }.each do |type, path|
         print_thread = start_print_thread
         iterate path, 'local'.freeze, type, line
         print_thread.exit
@@ -340,7 +343,7 @@ def main
     end
   end
   if $included.include? 'external'.freeze
-    EXTERNAL_PATHS.each do |type, path|
+    EXTERNAL_PATHS.reject{|type, _path| SKIP.include?(type) }.each do |type, path|
       puts "running on external (#{type})"
       current_line += 1
       threads << Thread.new(current_line) do |line|
@@ -364,8 +367,8 @@ def iterate(path, location, type, line = 0)
     next if BLACKLIST.include? show_name
     next if show_name[FILTER]
     count += 1
-    break if count > 2
-    next unless show_name < 'BBC'
+    # break if count > 2
+    # next unless show_name < 'BBD'
     # next unless show.start_with?('C')
     analyze_show_group show_name, path + '/' + show_name, location, type, line
   end
@@ -529,7 +532,7 @@ end
 
 def remote_main
   $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
-  REMOTE_PATHS.each do |type, path|
+  REMOTE_PATHS.reject{|type, _path| SKIP.include?(type) }.each do |type, path|
     iterate(path, 'remote'.freeze, type)
     $cache.write
   end
