@@ -27,12 +27,14 @@ CACHE_REFRESH = 30 # seconds
 PRINT_REFRESH = 1 / 60.0 # seconds
 DIGEST_ALGO = Digest::SHA256
 SHOW_SEMAPHORE = Mutex.new
+ERROR_THRESHOLD = 5000
 
 if ARGV.empty?
   require 'dotenv/load'
   require 'net/ssh'
   require 'net/sftp'
   require 'colorize'
+  require 'active_support/core_ext/string/access'
   require 'active_support/core_ext/string/indent'
   require 'active_support/core_ext/string/filters'
   require 'terminal-size'
@@ -349,8 +351,15 @@ def main
             RESULTS.replace Marshal::load(serialized_results)
           rescue TypeError => e
             $included.delete? 'remote'.freeze # debug?
-            puts 'Error reading results from remote'
-            puts serialized_results
+            $stderr.puts 'Error reading results from remote'
+            $stderr.puts e.full_message
+            if serialized_results.size <= ERROR_THRESHOLD
+              $stderr.puts serialized_results
+            else
+              $stderr.puts serialized_results.truncate(ERROR_THRESHOLD / 2)
+              $stderr.puts "\n**** #{serialized_results.size - ERROR_THRESHOLD} serialized_results chars omitted ****\n\n"
+              $stderr.puts serialized_results.last(ERROR_THRESHOLD / 2)
+            end
           end
         end
       end
