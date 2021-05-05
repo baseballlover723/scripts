@@ -1,5 +1,8 @@
 require 'digest'
 require_relative './cache'
+require 'active_support'
+require 'active_support/number_helper'
+require 'zlib'
 
 REMOTE = !ARGV.empty?
 SKIP = []
@@ -13,6 +16,7 @@ EXTERNAL_PATHS = {movies: '/mnt/h/movies', tv: '/mnt/i/tv'}
 REMOTE_PATHS = {movies: '/entertainment/movies', tv: '/raided/temp_tv'}
 # REMOTE_PATHS = {movies: '../../entertainment/movies'}
 OPTS = {encoding: 'UTF-8'}
+SSH_OPTIONS = {compression: true, config: true, timeout: 1, max_pkt_size: 0x10000}
 RESULTS = {movies: {}, tv: {}}
 MOVIE_EXTENSIONS = ['.mkv', '.mp4', '.m4v', '.srt', '.avi']
 BLACKLIST = ['anime', 'Naruto', 'Naruto - Copy']
@@ -29,8 +33,6 @@ if ARGV.empty?
   require 'net/ssh'
   require 'net/sftp'
   require 'colorize'
-  require 'active_support'
-  require 'active_support/number_helper'
   require 'active_support/core_ext/string/indent'
   require 'active_support/core_ext/string/filters'
   require 'terminal-size'
@@ -195,10 +197,6 @@ class Episode
     end
   end
 
-  def h_size(size)
-    ActiveSupport::NumberHelper.number_to_human_size(size, {precision: 5, strip_insignificant_zeros: false})
-  end
-
   def sizes_same?()
     sizes = Set.new
     $included.each do |type|
@@ -297,26 +295,64 @@ class CacheEpisode < BaseCachePayload
   end
 end
 
+def with_uploaded(ssh, files)
+  files.map do |local, remote|
+    ssh.sftp.upload(local, remote)
+  end.map(&:wait)
+
+  yield
+
+  ssh.exec! "rm #{files.values.join(" ")}"
+end
+
+def execute_on_remote(ssh)
+  serialized_results = ""
+  channel = ssh.open_channel do |ch|
+    ch.exec "source load_rbenv && ruby remote.rb remote" do |ch, success|
+      raise "could not execute command" unless success
+      # "on_data" is called when the process writes something to stdout
+      transferring_data = false
+      ch.on_data do |_c, data|
+        if transferring_data
+          serialized_results << data
+        elsif data == "transferring_data\n"
+          transferring_data = true
+        elsif data.start_with?("progress: ")
+          msg = data[10..-1]
+          print_updating(msg, $updating_lines - 1, true)
+        else
+          $stdout.print data
+        end
+      end
+
+      # "on_extended_data" is called when the process writes something to stderr
+      ch.on_extended_data do |_c, _type, data|
+        $stderr.print data
+      end
+    end
+  end
+
+  channel.wait
+
+  Zlib::Inflate.inflate serialized_results
+end
+
 def main
   puts Time.now
   $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
   if $included.include? 'remote'.freeze
     begin
-      Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
-        ssh.sftp.connect do |sftp|
-          sftp.upload!(__FILE__, 'remote.rb')
-          sftp.upload!('cache.rb', 'cache.rb')
+      Net::SSH.start(ENV['OVERMIND_SSH_HOST'], nil, SSH_OPTIONS) do |ssh|
+        with_uploaded(ssh, {__FILE__ => 'remote.rb', 'cache.rb' => 'cache.rb'}) do
+          serialized_results = execute_on_remote(ssh)
+          begin
+            RESULTS.replace Marshal::load(serialized_results)
+          rescue TypeError => e
+            $included.delete? 'remote'.freeze # debug?
+            puts 'Error reading results from remote'
+            puts serialized_results
+          end
         end
-        puts 'running on remote'
-        serialized_results = ssh.exec! "source load_rbenv && ruby remote.rb remote"
-        begin
-          RESULTS.replace Marshal::load(serialized_results)
-        rescue TypeError => e
-          puts 'Error reading results from remote'
-          puts serialized_results
-        end
-        ssh.exec! "rm remote.rb"
-        ssh.exec! "rm cache.rb"
       end
     rescue Errno::EAGAIN => e
       puts 'could not connect to overmind'
@@ -333,7 +369,7 @@ def main
     puts 'running on local'
     current_line += 1
     threads << Thread.new(current_line) do |line|
-      LOCAL_PATHS.reject{|type, _path| SKIP.include?(type) }.each do |type, path|
+      LOCAL_PATHS.reject { |type, _path| SKIP.include?(type) }.each do |type, path|
         print_thread = start_print_thread
         iterate path, 'local'.freeze, type, line
         print_thread.exit
@@ -343,7 +379,7 @@ def main
     end
   end
   if $included.include? 'external'.freeze
-    EXTERNAL_PATHS.reject{|type, _path| SKIP.include?(type) }.each do |type, path|
+    EXTERNAL_PATHS.reject { |type, _path| SKIP.include?(type) }.each do |type, path|
       puts "running on external (#{type})"
       current_line += 1
       threads << Thread.new(current_line) do |line|
@@ -434,10 +470,10 @@ def analyze_episode(season, episode_name, path, location, line)
 
     human_path = path
     human_path = path.split("/").map { |p| p.match(TV_EPISODE_REGEX) ? p[TV_EPISODE_REGEX] : p }.join("/") if path.match TV_EPISODE_REGEX
-    print_updating("calculating checksum for #{human_path}", line)
+    print_updating("Calcing CKSM for #{human_path}", line)
 
     data, _cached = $cache.get(path) do
-      print_updating("calculating checksum for #{human_path}", line, true)
+      print_updating("Calcing CKSM for #{human_path}", line, true)
       file_size = File.size(path)
       if (file_size == 0) # so
         file_size = 1
@@ -503,7 +539,7 @@ def nested_folder?(show_name)
 end
 
 def print_updating(msg, line, force = false)
-  return unless ARGV.empty?
+  print "progress: #{msg}" or return if !ARGV.empty? && force
   if force || should_print?
     Thread.current[:should_print] = false
     str = $cursor.save
@@ -531,12 +567,24 @@ def should_print?
 end
 
 def remote_main
+  start = Time.now
+  $stdout.sync = true # don't buffer stdout
+  puts "running on remote"
   $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
-  REMOTE_PATHS.reject{|type, _path| SKIP.include?(type) }.each do |type, path|
+
+  REMOTE_PATHS.reject { |type, _path| SKIP.include?(type) }.each do |type, path|
+    puts "running on #{type}: #{path}"
     iterate(path, 'remote'.freeze, type)
+    print_updating("done running remote #{type}: #{path}", 0, true)
     $cache.write
   end
-  puts Marshal::dump(RESULTS)
+  binary = Zlib::Deflate.deflate(Marshal::dump(RESULTS))
+  puts "Took #{Time.now - start} seconds to run on remote. binary size: #{h_size(binary.bytesize)}"
+  sleep 0.000001 # prevents control messages from getting mixed with other messages
+  puts "transferring_data" # tells local that the next output is data
+  sleep 0.000001 # prevents control messages from getting mixed with other messages
+  $stdout.sync = false # turn back on stdout buffering
+  print binary
 end
 
 def find_show_group(show_group_name, type)
@@ -726,6 +774,10 @@ def to_human_duration(time)
   str << "#{ss} seconds, " if ss > 0
   str = str[0..-3]
   str.reverse.sub(" ,", " and ".reverse).reverse
+end
+
+def h_size(size)
+  ActiveSupport::NumberHelper.number_to_human_size(size, {precision: 5, strip_insignificant_zeros: false})
 end
 
 if ARGV.empty?
