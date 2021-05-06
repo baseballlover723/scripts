@@ -1,4 +1,5 @@
 require 'json'
+require 'pathname'
 require 'active_support'
 require 'active_support/number_helper'
 
@@ -12,6 +13,7 @@ SSH_OPTIONS = {compression: true, config: true, timeout: 1, max_pkt_size: 0x1000
 EXT = '.cache.json'
 $total_paths = 0
 $trimmed_paths = 0
+$cached_drive_paths = {}
 
 def main
   Dir.glob("*" + EXT).each do |cache_file|
@@ -22,16 +24,27 @@ end
 def trim_cache(path)
   puts "trimming #{path}"
   json = JSON.parse(File.read(path))
-  $total_paths += before_size = json.size
+  before_size = json.size
+  connected_paths = 0
   json.select! do |path, _data|
-    still_exists?(path)
+    next true unless drive_connected?(path)
+    connected_paths += 1
+    File.file?(path) # returns false for existing directories
   end
+  $total_paths += connected_paths
   $trimmed_paths += before_size - json.size
   File.write(path, JSON.generate(json))
 end
 
-def still_exists?(path)
-  File.exist?(path) && !File.directory?(path)
+# optimized so that it only caches files if they meet the correct directory depth, and that it only creates pathnames for new directories
+def drive_connected?(path)
+  drive_path = $cached_drive_paths.keys.find { |p| path.start_with?(p) }
+  return $cached_drive_paths[drive_path] if drive_path && $cached_drive_paths[drive_path]
+  drive_path = Pathname.new(path).descend.take(3).fetch(2, path).to_s
+
+  exists = File.exist?(drive_path) && File.directory?(drive_path)
+  $cached_drive_paths[drive_path] = exists if drive_path != path
+  exists
 end
 
 def remote_trim
@@ -46,7 +59,6 @@ def remote_trim
     puts 'could not connect to overmind'
   end
 end
-
 
 start = Time.now
 main
