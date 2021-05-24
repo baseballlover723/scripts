@@ -447,7 +447,6 @@ def analyze_show(show, path, type, line)
     entries = Dir.entries path, **OPTS
     entries.sort.each do |entry|
       next if entry == '.' || entry == '..' || entry == 'desktop.ini' # || entry.end_with?('.txt')
-      analyze_show(entry, path + '/' + entry, type, line) and next if nested_show? entry
       if File.directory?("#{path}/#{entry}")
         analyze_season find_season(anime, entry), path + '/' + entry, type, line
       else
@@ -497,11 +496,6 @@ def analyze_episode(season, episode_name, path, type, line)
     episode.send(type + '_checksum=', data[CHECKSUM_KEY])
   rescue Errno::EACCES => _
   end
-end
-
-def nested_show?(show)
-  nested_shows = ['A Certain Scientific Railgun', 'The Legend of Korra']
-  nested_shows.include? show
 end
 
 def print_updating(msg, line, force = false)
