@@ -453,9 +453,6 @@ def analyze_show(show, path, type, line)
         analyze_episode root_season, entry, path + '/' + entry, type, line
       end
     end
-    if root_season.episodes.empty?
-      anime.seasons.delete(root_season.name)
-    end
   rescue Errno::EACCES => _
   end
 end
