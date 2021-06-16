@@ -15,7 +15,6 @@ TEMP_PATH = '/mnt/e/anime'
 REMOTE_PATHS = ['/entertainment/anime']
 OPTS = {encoding: 'UTF-8'}
 SSH_OPTIONS = {compression: true, config: true, timeout: 1, max_pkt_size: 0x10000}
-RESULTS = {}
 HIDE_LOCAL_ONLY = false
 # TODO hide_local_only make extensible so it dosen't only depend on local and remote
 CACHE_PATH = 'check_overminds.cache.json'
@@ -352,6 +351,7 @@ end
 
 def main
   puts Time.now
+  results = {}
   $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
   if $included.include? 'remote'.freeze
     begin
@@ -359,7 +359,7 @@ def main
         with_uploaded(ssh, {__FILE__ => 'remote.rb', 'cache.rb' => 'cache.rb'}) do
           serialized_results = execute_on_remote(ssh)
           begin
-            RESULTS.replace Marshal::load(serialized_results)
+            results.replace Marshal::load(serialized_results)
           rescue TypeError => e
             $included.delete? 'remote'.freeze # debug?
             $stderr.puts 'Error reading results from remote'
@@ -390,8 +390,8 @@ def main
     current_line += 1
     threads << Thread.new(current_line) do |line|
       print_thread = start_print_thread
-      iterate LOCAL_PATH + '/zWatched', 'local'.freeze, line
-      iterate LOCAL_PATH, 'local'.freeze, line
+      iterate results, LOCAL_PATH + '/zWatched', 'local'.freeze, line
+      iterate results, LOCAL_PATH, 'local'.freeze, line
       print_thread.exit
       $cache.write
       print_updating("done running local", line, true)
@@ -402,8 +402,8 @@ def main
     current_line += 1
     threads << Thread.new(current_line) do |line|
       print_thread = start_print_thread
-      iterate EXTERNAL_PATH + '/zWatched', 'external'.freeze, line
-      iterate EXTERNAL_PATH, 'external'.freeze, line
+      iterate results, EXTERNAL_PATH + '/zWatched', 'external'.freeze, line
+      iterate results, EXTERNAL_PATH, 'external'.freeze, line
       print_thread.exit
       $cache.write
       print_updating("done running external", line, true)
@@ -414,17 +414,18 @@ def main
     current_line += 1
     threads << Thread.new(current_line) do |line|
       print_thread = start_print_thread
-      iterate LONG_EXTERNAL_PATH + '/zWatched', 'long_external'.freeze, line
-      iterate LONG_EXTERNAL_PATH, 'long_external'.freeze, line
+      iterate results, LONG_EXTERNAL_PATH + '/zWatched', 'long_external'.freeze, line
+      iterate results, LONG_EXTERNAL_PATH, 'long_external'.freeze, line
       print_thread.exit
       $cache.write
       print_updating("done running long_external", line, true)
     end
   end
   threads.each { |thread| thread.join }
+  results
 end
 
-def iterate(path, type, line = 0)
+def iterate(results, path, type, line = 0)
   shows = Dir.entries path, **OPTS
   count = 0
   shows.sort.each do |show|
@@ -433,16 +434,13 @@ def iterate(path, type, line = 0)
     # break if count > 5 # DEBUG
     # next unless show < "A"
     # next unless show.start_with?('A Silent')
-    analyze_show show, path + '/' + show, type, line
+    analyze_show results, show, path + '/' + show, type, line
   end
 end
 
-def analyze_show(show, path, type, line)
+def analyze_show(results, show, path, type, line)
   begin
-    anime = ANIME_SEMAPHORE.synchronize do
-      anime = RESULTS[show] || Anime.new(show)
-      RESULTS[anime.name] = anime
-    end
+    anime = find_anime(results, show)
     root_season = find_season anime, 'root'
     entries = Dir.entries path, **OPTS
     entries.sort.each do |entry|
@@ -526,23 +524,31 @@ end
 
 def remote_main
   start = Time.now
+  results = {}
   $stdout.sync = true # don't buffer stdout
   puts "running on remote"
   $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
 
   REMOTE_PATHS.each do |rp|
     puts "running on #{rp}"
-    iterate(rp, 'remote'.freeze) if File.exist?(rp)
+    iterate(results, rp, 'remote'.freeze) if File.exist?(rp)
     print_updating("done running remote #{rp}", 0, true)
     $cache.write
   end
-  binary = Zlib::Deflate.deflate(Marshal::dump(RESULTS))
+  binary = Zlib::Deflate.deflate(Marshal::dump(results))
   puts "Took #{Time.now - start} seconds to run on remote. binary size: #{h_size(binary.bytesize)}"
   sleep 0.000001 # prevents control messages from getting mixed with other messages
   puts "transferring_data" # tells local that the next output is data
   sleep 0.000001 # prevents control messages from getting mixed with other messages
   $stdout.sync = false # turn back on stdout buffering
   print binary
+end
+
+def find_anime(results, name)
+  ANIME_SEMAPHORE.synchronize do
+    anime = results[name] || Anime.new(name)
+    results[anime.name] = anime
+  end
 end
 
 def find_season(anime, name)
@@ -553,9 +559,9 @@ def find_episode(season, name)
   season.episodes[name] || Episode.new(season, name)
 end
 
-def find_dups
+def find_dups(results)
   dups = Set.new
-  RESULTS.each_value do |show|
+  results.each_value do |show|
     dups << show if find_show_dups show
   end
   dups
@@ -570,8 +576,8 @@ def find_show_dups(show)
   false
 end
 
-def trim_results
-  RESULTS.each_value do |show|
+def trim_results(results)
+  results.each_value do |show|
     show.seasons.each_value do |season|
       season.episodes.each_value do |episode|
         sizes = Set.new
@@ -596,11 +602,11 @@ def trim_results
       show.seasons.delete(season.name) if season.episodes.size == 0
       # show.seasons.delete(season.name) if season.episodes.size > 10 # TODO delete
     end
-    RESULTS.delete(show.name) if show.seasons.size == 0
+    results.delete(show.name) if show.seasons.size == 0
   end
 end
 
-def print_results
+def print_results(results)
   cols = $terminal_size[:width]
   print LocalString.new("local size").paint if $included.include? 'local'.freeze
   if $included.include? 'remote'.freeze
@@ -624,7 +630,7 @@ def print_results
   print " unchanged".uncolor
   print "\n"
 
-  shows = RESULTS.values.sort_by(&:name).reverse
+  shows = results.values.sort_by(&:name).reverse
   shows.each do |show|
     puts show.name
     seasons = show.seasons.values.sort_by { |s| s.name }
@@ -651,7 +657,7 @@ def print_results
     remote = 0
     external = 0
     local = 0
-    RESULTS.each_value do |show|
+    results.each_value do |show|
       show.seasons.each_value do |season|
         season.episodes.each_value do |episode|
           # puts episode.inspect
@@ -717,10 +723,10 @@ end
 
 if ARGV.empty?
   start = Time.now
-  main
-  dups = find_dups
-  trim_results
-  print_results
+  results = main
+  dups = find_dups(results)
+  trim_results(results)
+  print_results(results)
   print_dups dups
   puts "Took #{Time.now - start} seconds"
 else
