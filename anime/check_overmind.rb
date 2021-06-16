@@ -93,6 +93,12 @@ class Anime
   def add_season(season)
     @seasons[season.name] = season
   end
+
+  def merge!(anime_to_merge)
+    anime_to_merge.seasons.each_value do |season_to_merge|
+      find_season(self, season_to_merge.name).merge!(season_to_merge)
+    end
+  end
 end
 
 class Season
@@ -108,23 +114,35 @@ class Season
   def add_episode(episode)
     @episodes[episode.name] = episode
   end
+
+  def merge!(season_to_merge)
+    season_to_merge.episodes.each_value do |episode_to_merge|
+      find_episode(self, episode_to_merge.name).merge!(episode_to_merge)
+    end
+  end
 end
 
 class Episode
-  attr_accessor :season, :name, :local_size, :remote_size, :external_size, :long_external_size, :external_size_extra, :local_checksum, :remote_checksum, :external_checksum, :long_external_checksum
+  ATTRS = [:local_size, :remote_size, :external_size, :long_external_size, :local_checksum, :remote_checksum, :external_checksum, :long_external_checksum]
+  attr_accessor :season, :name, :external_size_extra
+  attr_accessor *ATTRS
 
   def initialize(season, name)
     @season = season
     @name = name
-    @local_size = 0
-    @remote_size = 0
-    @external_size = 0
-    @long_external_size = 0
-    @local_checksum = 0
-    @remote_checksum = 0
-    @external_checksum = 0
-    @long_external_checksum = 0
+    ATTRS.each do |attr|
+      instance_variable_set("@#{attr}", 0)
+    end
     season.add_episode self
+  end
+
+  def merge!(episode_to_merge)
+    ATTRS.each do |attr|
+      to_merge_value = episode_to_merge.send(attr)
+      if to_merge_value != 0
+        send(:"#{attr}=", to_merge_value)
+      end
+    end
   end
 
   def in_both_external?
@@ -351,7 +369,7 @@ end
 
 def main
   puts Time.now
-  results = {}
+  remote_results = {}
   $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
   if $included.include? 'remote'.freeze
     begin
@@ -359,7 +377,7 @@ def main
         with_uploaded(ssh, {__FILE__ => 'remote.rb', 'cache.rb' => 'cache.rb'}) do
           serialized_results = execute_on_remote(ssh)
           begin
-            results.replace Marshal::load(serialized_results)
+            remote_results.replace Marshal::load(serialized_results)
           rescue TypeError => e
             $included.delete? 'remote'.freeze # debug?
             $stderr.puts 'Error reading results from remote'
@@ -389,40 +407,46 @@ def main
     puts 'running locally'
     current_line += 1
     threads << Thread.new(current_line) do |line|
+      results = {}
       print_thread = start_print_thread
       iterate results, LOCAL_PATH + '/zWatched', 'local'.freeze, line
       iterate results, LOCAL_PATH, 'local'.freeze, line
       print_thread.exit
       $cache.write
       print_updating("done running local", line, true)
+      results
     end
   end
   if $included.include? 'external'.freeze
     puts 'running on external'
     current_line += 1
     threads << Thread.new(current_line) do |line|
+      results = {}
       print_thread = start_print_thread
       iterate results, EXTERNAL_PATH + '/zWatched', 'external'.freeze, line
       iterate results, EXTERNAL_PATH, 'external'.freeze, line
       print_thread.exit
       $cache.write
       print_updating("done running external", line, true)
+      results
     end
   end
   if $included.include? 'long_external'.freeze
     puts 'running on long external'
     current_line += 1
     threads << Thread.new(current_line) do |line|
+      results = {}
       print_thread = start_print_thread
       iterate results, LONG_EXTERNAL_PATH + '/zWatched', 'long_external'.freeze, line
       iterate results, LONG_EXTERNAL_PATH, 'long_external'.freeze, line
       print_thread.exit
       $cache.write
       print_updating("done running long_external", line, true)
+      results
     end
   end
-  threads.each { |thread| thread.join }
-  results
+  results = threads.map { |thread| thread.value }
+  merge!(remote_results, *results)
 end
 
 def iterate(results, path, type, line = 0)
@@ -557,6 +581,16 @@ end
 
 def find_episode(season, name)
   season.episodes[name] || Episode.new(season, name)
+end
+
+def merge!(*results_arg)
+  first_result, *results = results_arg
+  results.reduce(first_result) do |results, to_merge|
+    to_merge.each_value do |anime_to_merge|
+      find_anime(results, anime_to_merge.name).merge!(anime_to_merge)
+    end
+    results
+  end
 end
 
 def find_dups(results)
