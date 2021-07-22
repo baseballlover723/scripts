@@ -1,3 +1,4 @@
+$start = Time.now
 require 'digest'
 require_relative './cache'
 require 'active_support'
@@ -12,8 +13,8 @@ SKIP = []
 LOCAL_PATHS = {movies: '/mnt/e/movies', tv: '/mnt/e/tv'}
 EXTERNAL_PATHS = {movies: '/mnt/h/movies', tv: '/mnt/i/tv'}
 # EXTERNAL_PATHS = {movies: '/mnt/e/movies'}
-# REMOTE_PATHS = {movies: '/entertainment/movies', tv: '/entertainment/tv'}
-REMOTE_PATHS = {movies: '/entertainment/movies', tv: '/raided/temp_tv'}
+REMOTE_PATHS = {movies: '/entertainment/movies', tv: '/entertainment/tv'}
+# REMOTE_PATHS = {movies: '/entertainment/movies', tv: '/raided/temp_tv'}
 # REMOTE_PATHS = {movies: '../../entertainment/movies'}
 OPTS = {encoding: 'UTF-8'}
 SSH_OPTIONS = {compression: true, config: true, timeout: 1, max_pkt_size: 0x10000}
@@ -340,6 +341,7 @@ def execute_on_remote(ssh)
 end
 
 def main
+  puts "Took #{Time.now - $start} seconds to load script"
   puts Time.now
   $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
   if $included.include? 'remote'.freeze
@@ -576,7 +578,6 @@ def should_print?
 end
 
 def remote_main
-  start = Time.now
   $stdout.sync = true # don't buffer stdout
   puts "running on remote"
   $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
@@ -588,7 +589,7 @@ def remote_main
     $cache.write
   end
   binary = Zlib::Deflate.deflate(Marshal::dump(RESULTS))
-  puts "Took #{Time.now - start} seconds to run on remote. binary size: #{h_size(binary.bytesize)}"
+  puts "Took #{Time.now - $start} seconds to run on remote. binary size: #{h_size(binary.bytesize)}"
   sleep 0.000001 # prevents control messages from getting mixed with other messages
   puts "transferring_data" # tells local that the next output is data
   sleep 0.000001 # prevents control messages from getting mixed with other messages

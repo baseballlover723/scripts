@@ -1,3 +1,4 @@
+$start = Time.now
 require 'digest'
 require_relative './cache'
 require 'active_support'
@@ -368,6 +369,7 @@ def execute_on_remote(ssh)
 end
 
 def main
+  puts "Took #{Time.now - $start} seconds to load script"
   puts Time.now
   remote_results = {}
   $cache = Cache.load(CACHE_PATH, CACHE_REFRESH)
@@ -547,7 +549,6 @@ def should_print?
 end
 
 def remote_main
-  start = Time.now
   results = {}
   $stdout.sync = true # don't buffer stdout
   puts "running on remote"
@@ -560,7 +561,7 @@ def remote_main
     $cache.write
   end
   binary = Zlib::Deflate.deflate(Marshal::dump(results))
-  puts "Took #{Time.now - start} seconds to run on remote. binary size: #{h_size(binary.bytesize)}"
+  puts "Took #{Time.now - $start} seconds to run on remote. binary size: #{h_size(binary.bytesize)}"
   sleep 0.000001 # prevents control messages from getting mixed with other messages
   puts "transferring_data" # tells local that the next output is data
   sleep 0.000001 # prevents control messages from getting mixed with other messages
