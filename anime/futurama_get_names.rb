@@ -37,7 +37,7 @@ end
 
 def get_episode_names
   html = HTTParty.get(URL)
-  parsed = Nokogiri::HTML html
+  parsed = Nokogiri::HTML5 html
 
   episodes_by_season = {}
 

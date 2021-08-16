@@ -40,7 +40,7 @@ end
 
 def get_episode_names
   html = HTTParty.get(URL).body
-  parsed = Nokogiri::HTML html
+  parsed = Nokogiri::HTML5 html
 
   episodes_by_season = {}
   tables = parsed.css('.wikiepisodetable')[0..23]
