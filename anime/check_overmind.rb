@@ -705,11 +705,9 @@ def print_results(results)
     end
     transfer_amount = local
     transfer = ActiveSupport::NumberHelper.number_to_human_size(transfer_amount, {precision: 5, strip_insignificant_zeros: false})
-    # kilobytes_per_sec = 1400
-    # kilobytes_per_sec = 1200
-    kilobytes_per_sec = 1024
-    est = (transfer_amount) / (1024 * kilobytes_per_sec)
-    puts "Need to transfer #{transfer.light_cyan}: EST: #{to_human_duration(est).light_cyan} (#{kilobytes_per_sec} KB/s)"
+    megabits_per_sec = 30
+    est = (transfer_amount) / (1024 * 1024 * megabits_per_sec / 8)
+    puts "Need to transfer #{transfer.light_cyan}: EST: #{to_human_duration(est).light_cyan} (#{megabits_per_sec} Mib/s)"
   end
 end
 
