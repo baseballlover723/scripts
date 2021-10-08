@@ -160,7 +160,7 @@ struct Tournament
   def initialize(@users : Array(User), @prize_format : Array(Float64))
     @ranking = Array(Ranking).new(@users.size)
     @users.sort!
-    @users.each_with_index { |u, i| u.name = ('A' + i).to_s }
+    @users.each_with_index { |u, i| u.name = ('A' + i).to_s } # keep
 
     rank = 1_u8
     user_arr = [@users.first]
@@ -189,6 +189,10 @@ struct Tournament
     end
   end
 
+  def ==(other : Tournament) : Bool
+    rankings == other.rankings
+  end
+
   private def calc_prize_amount(rank : UInt8, users : Array(User)) : Float64
     total_prize = @prize_format[(rank-1)...(rank-1+users.size)].sum
     total_prize / users.size
@@ -207,7 +211,7 @@ def my_main(numb_users : Int32, prize_format : Array(Float64))
   simulated_tournament_count = Pointer(UInt128).malloc(1, 0)
   generate_time = Time.measure do
     tournament_mem = Benchmark.memory do
-      tournaments = generate_tournaments(users, prize_format, simulated_tournament_count)
+      tournaments = generate_tournaments(users, prize_format, simulated_tournament_count) # keep
     end
   end
 
@@ -224,21 +228,22 @@ def my_main(numb_users : Int32, prize_format : Array(Float64))
   puts "Used #{tournament_mem.humanize_bytes(precision: 5)} of memory"
 end
 
-def generate_tournaments(users : Array(User), prize_format : Array(Float64), simulated_tournament_count : Pointer(UInt128)) : Array(Tournament)
+def generate_tournaments(original_users : Array(User), prize_format : Array(Float64), simulated_tournament_count : Pointer(UInt128)) : Array(Tournament)
   record_set = Set(Array(Tuple(UInt8, UInt8, UInt8))).new
   tournaments = [] of Tournament
 
-  numb_matches = (users.size ** 2 - users.size) // 2
-  simulated_tournament_count.value = 3_u128 ** numb_matches
+  numb_matches = (original_users.size ** 2 - original_users.size) // 2
+  simulated_tournament_count.value = 3_u128 ** numb_matches // 3 ** (original_users.size - 1) * 2 ** (original_users.size - 1)
 
   start_time = last_rate_time = Time.local
   tournaments_simulated = last_tournaments_simulated = 0_u128
-  current_rate = 1.0
+  current_rate = Int32::MAX.to_f
   last_time = Time.local
   old_sync = STDERR.sync?
   STDERR.sync = true
-  puts "generating tournaments (#{simulated_tournament_count.value.format} to simulate)"
-  Array.each_product(Array.new(numb_matches, Result.values), reuse: true) do |results|
+
+  puts "generating tournaments (#{simulated_tournament_count.value.format} to simulate)" # keep
+  Array.each_product(generate_possible_results(original_users.size, numb_matches), reuse: true) do |results|
     now = Time.local
     if now - last_time > PROGRESS_REFRESH_TIME
       if now - last_rate_time > RATE_REFRESH_TIME
@@ -248,18 +253,19 @@ def generate_tournaments(users : Array(User), prize_format : Array(Float64), sim
         last_rate_time = now
       end
 
-      STDERR.print get_progress_str(tournaments, tournaments_simulated, simulated_tournament_count, current_rate)
+      STDERR.print get_progress_str(tournaments, tournaments_simulated, simulated_tournament_count, current_rate) # keep
       last_time = now
     end
     tournaments_simulated += 1
-    users = users.clone
+    users = original_users.clone
     simulate_tournament(users, results)
     tournament = Tournament.new(users, prize_format)
+
     if record_set.add?(tournament.users.map(&.record.to_tuple))
       tournaments << tournament
     end
   end
-  puts
+  puts # keep
 
   STDERR.sync = old_sync
   tournaments.sort_by! do |t|
@@ -271,6 +277,20 @@ def generate_tournaments(users : Array(User), prize_format : Array(Float64), sim
   end
 end
 
+def generate_possible_results(numb_users : Int32, numb_matches : Int32) : Array(Array(Result))
+  last_index = 0
+  indexes = [] of Int32
+  (1...numb_users).reverse_each do |add|
+    indexes << last_index
+    last_index += add
+  end
+
+  Array(Array(Result)).new(numb_matches) do |i|
+    results = Result.values.dup
+    results.delete_at(-1) if indexes.includes?(i)
+    results
+  end
+end
 
 def simulate_tournament(users, results)
   users
@@ -299,7 +319,7 @@ def get_progress_str(tournaments, tournaments_simulated, simulated_tournament_co
   time_left = (left / rate).seconds
   end_time = time_left.from_now.to_s(TIME_FORMAT)
   rate_str = (rate / 1_000).to_i.format
-  progress = "\r#{ut_size} uniq tours #{st_size} / #{t_st} simulated (#{perc}%) #{time_left} left -> #{end_time} (#{rate_str}K / s)"
+  progress = "\u001b[0K\r#{ut_size} uniq tours #{st_size} / #{t_st} simmed (#{perc}%) #{time_left} left -> #{end_time} (#{rate_str}K / s)"
 end
 
 total_time = Time.measure do
