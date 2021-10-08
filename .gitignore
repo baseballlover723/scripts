@@ -1,3 +1,8 @@
+# binary files
+*
+!*/
+!*.*
+
 *.gem
 *.rbc
 /.config
@@ -45,4 +50,6 @@ build/
 *.log
 *.xlsx
 *.csv
+
+
 
