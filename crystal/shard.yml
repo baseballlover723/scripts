@@ -1,0 +1,17 @@
+name: scripts
+version: 0.1.0
+
+authors:
+  - Philip Ross <dev@baseballlover723.com>
+
+targets:
+  elo_calc:
+    main: src/elo_calc.cr
+  quads:
+    main: src/quads.cr
+  tester:
+    main: src/tester.cr
+
+crystal: 1.2.2
+
+license: MIT

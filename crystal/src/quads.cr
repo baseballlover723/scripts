@@ -243,7 +243,7 @@ def generate_tournaments(original_users : Array(User), prize_format : Array(Floa
   STDERR.sync = true
 
   puts "generating tournaments (#{simulated_tournament_count.value.format} to simulate)" # keep
-  Array.each_product(generate_possible_results(original_users.size, numb_matches), reuse: true) do |results|
+  Indexable.each_cartesian(generate_possible_results(original_users.size, numb_matches)) do |results|
     now = Time.local
     if now - last_time > PROGRESS_REFRESH_TIME
       if now - last_rate_time > RATE_REFRESH_TIME
