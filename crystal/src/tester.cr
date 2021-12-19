@@ -10,6 +10,8 @@ def main
   puts "first string"
   puts "differntasdf"
   puts "asdf"
+  puts "a different one"
+  puts "release_mode: #{binary_release?}"
 end
 
 main

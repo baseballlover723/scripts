@@ -4,7 +4,13 @@ version: 0.1.0
 authors:
   - Philip Ross <dev@baseballlover723.com>
 
+crystal: 1.2.2
+
+license: MIT
+
 targets:
+  pre_tournament:
+    main: src/pre_tournament.cr
   elo_calc:
     main: src/elo_calc.cr
   quads:
@@ -12,6 +18,7 @@ targets:
   tester:
     main: src/tester.cr
 
-crystal: 1.2.2
-
-license: MIT
+dependencies:
+  myhtml:
+    github: kostya/myhtml
+    version: ~> 1.5.8
