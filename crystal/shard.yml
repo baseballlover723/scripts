@@ -19,6 +19,11 @@ targets:
     main: src/tester.cr
 
 dependencies:
+  dotenv:
+    github: gdotdesign/cr-dotenv
+    version: ~> 1.0
   myhtml:
     github: kostya/myhtml
     version: ~> 1.5.8
+  google_spreadsheets:
+    github: klirix/google_spreadsheets

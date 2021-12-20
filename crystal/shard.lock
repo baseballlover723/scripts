@@ -1,5 +1,13 @@
 version: 2.0
 shards:
+  dotenv:
+    git: https://github.com/gdotdesign/cr-dotenv.git
+    version: 1.0.0
+
+  google_spreadsheets:
+    git: https://github.com/klirix/google_spreadsheets.git
+    version: 0.1.0+git.commit.cfd0364b78c3216c56874332b8449135a2544712
+
   myhtml:
     git: https://github.com/kostya/myhtml.git
     version: 1.5.8
