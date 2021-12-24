@@ -121,7 +121,6 @@ def lookup_id(name : String, username : String, id : String)
 end
 
 def parse_live_ratings(name : String, id : String, username : String, html : Myhtml::Parser) : Player
-  # name = parse_name(id, html.css("font b").first.inner_text)
   number_of_pages = Math.max(html.css("table nobr a").size, 1)
 
   events = [] of Event
@@ -131,10 +130,10 @@ def parse_live_ratings(name : String, id : String, username : String, html : Myh
       response = HTTP::Client.get("#{EVENTS_URL}#{id}.#{page}")
       puts "name: #{name}, page: #{page}, status: #{response.status_code}" if response.status_code != 200
       page_html = Myhtml::Parser.new(response.body)
-      events_channel.send(parse_events_page(page_html))
+      events_channel.send(parse_events_page(page_html, number_of_pages > 1))
     end
   end
-  events.concat(parse_events_page(html))
+  events.concat(parse_events_page(html, number_of_pages > 1))
   (number_of_pages - 1).times do |_|
     events.concat(events_channel.receive)
   end
@@ -167,8 +166,7 @@ def parse_name(raw_name : String)
   "#{names.first.capitalize} #{names.last.capitalize}"
 end
 
-def parse_events_page(html : Myhtml::Parser) : Array(Event)
-  multiple_pages = !html.css("b b").empty?
+def parse_events_page(html : Myhtml::Parser, multiple_pages : Bool) : Array(Event)
   table = html.nodes(:table).find do |table_node|
     first_cells = table_node.css("tr td")
     next false if first_cells.empty?
