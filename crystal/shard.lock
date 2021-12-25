@@ -1,5 +1,9 @@
 version: 2.0
 shards:
+  ansi-escapes:
+    git: https://github.com/gtramontina/ansi-escapes.cr.git
+    version: 1.0.0
+
   dotenv:
     git: https://github.com/gdotdesign/cr-dotenv.git
     version: 1.0.0

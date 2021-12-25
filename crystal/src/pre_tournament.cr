@@ -5,9 +5,11 @@ require "http/client"
 require "myhtml"
 require "google_spreadsheets"
 require "colorize"
+require "./progress_printer"
 
-EVENTS_URL = "https://www.uschess.org/msa/MbrDtlTnmtHst.php?"
-PAGE_URL   = "https://www.uschess.org/msa/MbrDtlMain.php?"
+EVENTS_URL  = "https://www.uschess.org/msa/MbrDtlTnmtHst.php?"
+PAGE_URL    = "https://www.uschess.org/msa/MbrDtlMain.php?"
+RETRY_COUNT = 3
 
 PREFIXES = %w(dr. mr. ms. mrs.)
 SUFFIXES = %w(jr. sr. ii iii iv v vi vii)
@@ -83,6 +85,7 @@ struct Player
 end
 
 def my_main(google_sheet_link : String, section : String)
+  puts ""
   players = [] of Player
   time_control = TimeControl::RegularOnline
 
@@ -90,14 +93,17 @@ def my_main(google_sheet_link : String, section : String)
   spreadsheet = GoogleSpreadsheets::Spreadsheet.new(id, ENV["GOOGLE_API_KEY"])
   sheet = spreadsheet.worksheets.first
   cells = sheet.get("a2:e9999").values.select { |row| row[3] == section }
+  printer = ProgressPrinter.new(cells.size)
 
   player_channel = Channel(Player).new
-  cells.each do |row|
+  cells.each_with_index do |row, i|
     spawn do
+      row_number = i.to_u16
       name = parse_name(row[0].as(String))
+      printer.print(row_number, "looking up #{name}")
       username = row[1].as(String)
       id = row[2].as(String)
-      player = lookup_id(name, username, id)
+      player = lookup_id(name, username, id, printer, row_number)
       player_channel.send(player)
     end
   end
@@ -107,36 +113,55 @@ def my_main(google_sheet_link : String, section : String)
 
   sorted_players = players.sort_by { |p| p.ratings[time_control] || 0 }.reverse
 
-  puts "\n********************\n"
+  puts "\n********************\n\n"
   sorted_players.each_with_index do |player, rank|
     puts "#{(rank + 1).to_s.rjust((players.size + 1).to_s.size, ' ')}: #{player.to_s(time_control)}"
   end
 end
 
-def lookup_id(name : String, username : String, id : String)
+def lookup_id(name : String, username : String, id : String, printer : ProgressPrinter, row_number : RowNumber)
   response = HTTP::Client.get(EVENTS_URL + id)
-  puts "name: #{name}, page: 1, status: #{response.status_code}" if response.status_code != 200
+  retry_count = 1
+  while (response.status_code != 200 && retry_count < RETRY_COUNT)
+    retry_count += 1
+    response = HTTP::Client.get(EVENTS_URL + id)
+  end
+
+  progress_str = "name: #{name}, page: 1 / ?"
+  printer.print(row_number, progress_str)
+  STDERR.puts "#{progress_str}, status: #{response.status_code}" if response.status_code != 200
   html = Myhtml::Parser.new(response.body)
-  player = parse_live_ratings(name, id, username, html)
+  player = parse_live_ratings(name, id, username, html, printer, row_number)
 end
 
-def parse_live_ratings(name : String, id : String, username : String, html : Myhtml::Parser) : Player
+def parse_live_ratings(name : String, id : String, username : String, html : Myhtml::Parser, printer : ProgressPrinter, row_number : RowNumber) : Player
   number_of_pages = Math.max(html.css("table nobr a").size, 1)
 
   events = [] of Event
-  events_channel = Channel(Array(Event)).new
+  events_channel = Channel(Tuple(Array(Event), Int32)).new
+  page_count = 1
   (2..number_of_pages).each do |page|
     spawn do
       response = HTTP::Client.get("#{EVENTS_URL}#{id}.#{page}")
+      retry_count = 1
+      while (response.status_code != 200 && retry_count < RETRY_COUNT)
+        retry_count += 1
+        response = HTTP::Client.get("#{EVENTS_URL}#{id}.#{page}")
+      end
+
       puts "name: #{name}, page: #{page}, status: #{response.status_code}" if response.status_code != 200
       page_html = Myhtml::Parser.new(response.body)
-      events_channel.send(parse_events_page(page_html, number_of_pages > 1))
+      events_channel.send({parse_events_page(page_html, number_of_pages > 1), response.status_code})
     end
   end
   events.concat(parse_events_page(html, number_of_pages > 1))
   (number_of_pages - 1).times do |_|
-    events.concat(events_channel.receive)
+    page_count += 1
+    new_events, status = events_channel.receive
+    printer.print(row_number, "name: #{name}, page: #{page_count} / #{number_of_pages}")
+    events.concat(new_events)
   end
+  printer.print(row_number, "name: #{name}, page: #{page_count} / #{number_of_pages}")
 
   ratings = {} of TimeControl => Elo
   sorted_events = events.to_a.sort_by { |e| e.event_id }.reverse

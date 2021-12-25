@@ -27,3 +27,6 @@ dependencies:
     version: ~> 1.5.8
   google_spreadsheets:
     github: klirix/google_spreadsheets
+  ansi-escapes:
+    github: gtramontina/ansi-escapes.cr
+    version: ~> 1.0
