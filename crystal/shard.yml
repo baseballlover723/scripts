@@ -17,6 +17,8 @@ targets:
     main: src/quads.cr
   tester:
     main: src/tester.cr
+  bad_calc_gen:
+    main: src/bad_calc_gen.cr
 
 dependencies:
   dotenv:
