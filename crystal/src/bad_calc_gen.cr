@@ -1,11 +1,10 @@
-# SIGNS = [:+, :-, :*, :/]
-SIGNS = [:+]
+SIGNS = [:+, :-, :*, :/, ://, :%, :**, :>>, :<<]
 INTS = {Int8, Int16, Int32, Int64, Int128}
 NAME = "bad_calc"
 FILE = "./src/#{{{NAME}}}.cr"
 BINARY = "./bin/#{{{NAME}}}"
-BUILD = "crystal build -o #{{{BINARY}}} #{{{flag?(:release) ? " --release" : ""}}} --stats #{{{FILE}}}"
-TEST = "#{{{BINARY}}} 1 + 2"
+BUILD = "time crystal build -o #{{{BINARY}}} #{{{flag?(:release) ? " --release" : ""}}} --stats #{{{FILE}}}"
+TEST = "time #{{{BINARY}}} 1 + 2"
 
 puts "build: #{BUILD}"
 puts "run: #{BINARY}"
@@ -31,6 +30,8 @@ input = ARGV.shift
 # mod = INT_MAP[str]
 # puts "mod type: #{typeof(mod)}"
 
+DIVISON = 1
+
 macro generate(mod_str)
   puts "mod_str: #{{{mod_str}}}"
   {% for mod in INTS %}
@@ -49,23 +50,24 @@ macro generate(mod_str)
         
         {% for sign in SIGNS %}
         # {{sign.id}}
-        if (n1 == 0 && sign == {{sign.id.stringify}} && n2 == 0)
-          puts "0 {{sign.id}} 0 = 0"
+        # if (n1 == 0 && sign == {{sign.id.stringify}} && n2 == 0)
+        #   puts "0 {{sign.id}} 0 = 0"
         #{
-          ({{mod}}::MIN).upto({{mod}}::MAX).map do |i1| 
-            ({{mod}}::MIN).upto({{mod}}::MAX).select do |i2|
+          ({{mod}}::MIN // DIVISON).upto({{mod}}::MAX // DIVISON).map do |i1| 
+            ({{mod}}::MIN // DIVISON).upto({{mod}}::MAX // DIVISON).select do |i2|
               begin
-                i1 + i2
+                i1 {{sign.id}} i2
                 true
               rescue
                 false
               end
             end.map do |i2|
-              "elsif (n1 == #{i1} && sign == \"{{sign.id}}\" && n2 == #{i2})\n  puts(\"#{i1} {{sign.id}} #{i2} = #{i1 + i2}\")"
+              # "elsif (n1 == #{i1} && sign == \"{{sign.id}}\" && n2 == #{i2})\n  puts(\"#{i1} {{sign.id}} #{i2} = #{i1 {{sign.id}} i2}\")"
+              "if (n1 == #{i1} && sign == \"{{sign.id}}\" && n2 == #{i2})\n  puts(\"#{i1} {{sign.id}} #{i2} = #{i1 {{sign.id}} i2}\")\nend"
             end.join("\n")
           end.join("\n")
         }
-        end
+        # end
         {% end %}
         CRYSTAL
         f.puts(content)
