@@ -70,7 +70,7 @@ def analyze_show(show)
   root_season = Season.new(anime, 'root')
   entries = Dir.entries "#{PATH}/#{anime.name}", **OPTS
   entries.each do |entry|
-    next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
+    next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt') || entry.end_with?('.meta')
     if File.directory?("#{PATH}/#{anime.name}/#{entry}")
       analyze_season Season.new(anime, entry)
     else
@@ -87,7 +87,7 @@ def analyze_season(season)
   entries = Dir.entries "#{PATH}/#{season.anime.name}/#{season.name}", **OPTS
   entries.each do |entry|
     # puts entry
-    next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt')
+    next if entry == '.' || entry == '..' || entry == 'desktop.ini' || entry.end_with?('.txt') || entry.end_with?('.meta')
     analyze_episode season, entry
   end
 end
