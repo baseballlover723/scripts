@@ -45,6 +45,7 @@ build/
 .project
 /anime/.env
 /anime/*.cache*
+/anime/*.fakecache*
 /anime/*.progress*
 /anime/bin
 *.log
