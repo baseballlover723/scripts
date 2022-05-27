@@ -1,5 +1,5 @@
 require "date"
-require "json"
+require "oj"
 require "httparty"
 require "active_support"
 require "active_support/number_helper"
@@ -12,7 +12,6 @@ ARCHIVES_PATH = "#{API_HOST}/player/%{username}/games/archives"
 
 CHEATER_STATUS = "closed:fair_play_violations"
 
-# TODO fuzz between the last time the script (at the end) has been run and now
 # TODO make cache lifetime dependent on save file
 LAST_RUN_FILE = "chess_cheaterss.last_run.fakecache.json"
 RAND_TIME = 15 * 24 * 60 * 60 # seconds
@@ -57,15 +56,21 @@ MOST_GAMES = build_rules(["Gregorysteven", "pokerbloke99"], ALL_GAMES_RULES)
 ALL_IN_PERSON = ALL_ME_RUE + build_rules(["herooffallen"], ALL_GAMES_RULES)
 ALL_FRIENDS = ALL_IN_PERSON + build_rules(["infiniteiqwarrior", "jordanfiglioli", "thee_black_knight"], ALL_GAMES_RULES)
 
+# USERNAMES = MOST_GAMES
+# USERNAMES = ALL_FRIENDS + STREAMERS + MOST_GAMES
+if defined?(USERNAMES) && !defined?(ARCHIVE_SAVE_FILE) && !defined?(PROFILE_SAVE_FILE)
+  ARCHIVE_SAVE_FILE = "chess_cheaterss.archive.big.fakecache.json"
+  PROFILE_SAVE_FILE = "chess_cheaterss.profile.big.fakecache.json"
+end
+
 # USERNAMES = ALL_IN_PERSON
 # USERNAMES = ALL_FRIENDS
 # USERNAMES = STREAMERS
-# USERNAMES = MOST_GAMES
 # USERNAMES = ALL_FRIENDS + STREAMERS
-# USERNAMES = ALL_FRIENDS + STREAMERS + MOST_GAMES
-
-ARCHIVE_SAVE_FILE = defined?(USERNAMES) ? "chess_cheaterss.archive.big.fakecache.json" : "chess_cheaterss.archive.fakecache.json"
-PROFILE_SAVE_FILE = defined?(USERNAMES) ? "chess_cheaterss.profile.big.fakecache.json" : "chess_cheaterss.profile.fakecache.json"
+if defined?(USERNAMES) && !defined?(ARCHIVE_SAVE_FILE) && !defined?(PROFILE_SAVE_FILE)
+  ARCHIVE_SAVE_FILE = "chess_cheaterss.archive.medium.fakecache.json"
+  PROFILE_SAVE_FILE = "chess_cheaterss.profile.medium.fakecache.json"
+end
 
 # USERNAMES = ALL_ME
 # USERNAMES = USCF_ME
@@ -73,6 +78,10 @@ PROFILE_SAVE_FILE = defined?(USERNAMES) ? "chess_cheaterss.profile.big.fakecache
 # USERNAMES = ALL_ME_RUE
 # USERNAMES = USCF_FRIENDS
 USERNAMES = ALL_ME_RUE + USCF_FRIENDS
+if defined?(USERNAMES) && !defined?(ARCHIVE_SAVE_FILE) && !defined?(PROFILE_SAVE_FILE)
+  ARCHIVE_SAVE_FILE = "chess_cheaterss.archive.small.fakecache.json"
+  PROFILE_SAVE_FILE = "chess_cheaterss.profile.small.fakecache.json"
+end
 
 # FUTURE PLANS
 # cache profile gets
@@ -123,7 +132,6 @@ def main(username, rules)
     $archives = nil
     GC.start
   end
-  sleep 1
   numb_cheaters, cheated_games = games_by_username.
     filter.with_index { |(human_username, games), index| check_cheater(games.first["opponent"], index + 1, unique_opponents) }.
     reduce([0, []]) { |array, (username, games)|
@@ -165,20 +173,13 @@ end
 
 def load_archives(path)
   return {} unless File.exist?(path)
-  json = JSON.parse(File.read(path))
-  cache = {}
-
-  json.each do |username, payload|
-    last_modified = Time.parse(payload[LAST_MODIFIED])
-    cache[username] = {LAST_MODIFIED => last_modified, ARCHIVE => payload[ARCHIVE]}
-  end
-  cache
+  Oj.load_file(path)
 end
 
 def save_archives(path)
   cache = $archives
   sorted_cache = cache.sort_by { |path, _obj| path }.to_h
-  File.write(path, JSON.generate(sorted_cache))
+  File.write(path, Oj.dump(sorted_cache))
 end
 
 def check_profile_cache(username)
@@ -208,20 +209,13 @@ end
 
 def load_profiles(path)
   return {} unless File.exist?(path)
-  json = JSON.parse(File.read(path))
-  cache = {}
-
-  json.each do |username, payload|
-    last_modified = Time.parse(payload[LAST_MODIFIED])
-    cache[username] = {LAST_MODIFIED => last_modified, PROFILE => payload[PROFILE]}
-  end
-  cache
+  Oj.load_file(path)
 end
 
 def save_profiles(path)
   cache = $profiles
   sorted_cache = cache.sort_by { |path, _obj| path }.to_h
-  File.write(path, JSON.generate(sorted_cache))
+  File.write(path, Oj.dump(sorted_cache))
 end
 
 def get_archives(username)
@@ -368,7 +362,7 @@ end
 
 def load_last_run(path)
   return {PROFILE_SAVE_FILE => Time.now} unless File.exist?(path)
-  json = JSON.parse(File.read(path))
+  json = Oj.load_file(path)
   cache = {}
 
   json.each do |profile_path, last_modified|
@@ -381,7 +375,7 @@ end
 def save_last_run(path)
   cache = $last_run
   sorted_cache = cache.sort_by { |path, _obj| path }.to_h
-  File.write(path, JSON.generate(sorted_cache))
+  File.write(path, Oj.generate(sorted_cache))
 end
 
 start = Time.now
