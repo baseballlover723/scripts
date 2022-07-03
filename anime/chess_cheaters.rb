@@ -103,49 +103,61 @@ end
 # ask on lichess forum somewhere
 def main(username, rules)
   puts "\nchecking #{username} for cheater opponents with rules: #{rules}"
-  $profiles ||= load_profiles(PROFILE_SAVE_FILE)
-  $archives ||= load_archives(ARCHIVE_SAVE_FILE)
+  obsolete_archives = Set.new
+  # loop so that we can retry any archive links that contain obsolete usernames
+  loop do
+    $profiles ||= load_profiles(PROFILE_SAVE_FILE)
+    $archives ||= load_archives(ARCHIVE_SAVE_FILE)
+    invalidate_obsolete_archives(obsolete_archives, ARCHIVE_SAVE_FILE)
+    obsolete_archives.clear
 
-  archives = get_archives(username)
-  # archives = archives.drop(6) # DEBUG first cheater
-  # archives = archives.take(1) # DEBUG
-  # archives = archives.take(9) # DEBUG
-  # puts "archives: #{archives.inspect}"
+    archives = get_archives(username)
+    # archives = archives.drop(6) # DEBUG first cheater
+    # archives = archives.take(1) # DEBUG
+    # archives = archives.take(9) # DEBUG
+    # puts "archives: #{archives.inspect}"
 
-  total_game_count = 0
-  analyzed_games_count = 0
-  games_by_username = archives.map.with_index { |archive_link, index|
-    get_games(username, archive_link, index + 1, archives.size)
-    # .take(1) # DEBUG
-  }.map { |games| total_game_count += games.size; games }.
-    flat_map { |games| games }.
-    filter { |game| filter_game(game, rules) }.
-    map { |game| analyzed_games_count += 1; game }.
-    # map { |game| add_opponent(username, game) }.
-    # map { |game| pp game; game }.# DEBUG
-    group_by { |game| game["opponent"]["username"] }
-  save_archives(ARCHIVE_SAVE_FILE)
+    total_game_count = 0
+    analyzed_games_count = 0
+    games_by_username = archives.map.with_index { |archive_link, index|
+      get_games(username, archive_link, index + 1, archives.size).
+        map do |game|
+        game["archive_link"] = archive_link
+        game
+      end
+      # .take(1) # DEBUG
+    }.map { |games| total_game_count += games.size; games }.
+      flat_map { |games| games }.
+      filter { |game| filter_game(game, rules) }.
+      map { |game| analyzed_games_count += 1; game }.
+      # map { |game| add_opponent(username, game) }.
+      # map { |game| pp game; game }.# DEBUG
+      group_by { |game| game["opponent"]["username"] }
+    save_archives(ARCHIVE_SAVE_FILE)
 
-  unique_opponents = games_by_username.size
-  thread = Thread.new do
-    sleep 30
-    $archives = nil
+    unique_opponents = games_by_username.size
+    thread = Thread.new do
+      sleep 30
+      $archives = nil
+      GC.start
+    end
+    numb_cheaters, cheated_games = games_by_username.
+      filter.with_index { |(human_username, games), index| check_cheater(games.first["opponent"], index + 1, unique_opponents, obsolete_archives, games.map { |g| g["archive_link"] }) }.
+      reduce([0, []]) { |array, (username, games)|
+        array[0] += 1
+        array[1].concat(games)
+        array
+      }.map { |games|
+      games.is_a?(Enumerable) ? games.sort_by { |game| game["end_time"] } : games
+    }
+    thread.kill
+    save_profiles(PROFILE_SAVE_FILE)
     GC.start
-  end
-  numb_cheaters, cheated_games = games_by_username.
-    filter.with_index { |(human_username, games), index| check_cheater(games.first["opponent"], index + 1, unique_opponents) }.
-    reduce([0, []]) { |array, (username, games)|
-      array[0] += 1
-      array[1].concat(games)
-      array
-    }.map { |games|
-    games.is_a?(Enumerable) ? games.sort_by { |game| game["end_time"] } : games
-  }
-  thread.kill
-  save_profiles(PROFILE_SAVE_FILE)
-  GC.start
+    next unless obsolete_archives.empty?
 
-  print_games(username, cheated_games, total_game_count, analyzed_games_count, unique_opponents, numb_cheaters)
+    print_games(username, cheated_games, total_game_count, analyzed_games_count, unique_opponents, numb_cheaters)
+    break
+  end
 end
 
 def check_archive_cache(link)
@@ -163,7 +175,11 @@ end
 
 def update_archive_cache(link, archive, path)
   return archive if link.end_with?(Time.now.strftime("%Y/%m"))
-  $archives[link] = {LAST_MODIFIED => Time.now, ARCHIVE => archive}
+  if archive
+    $archives[link] = {LAST_MODIFIED => Time.now, ARCHIVE => archive}
+  else
+    $archives.delete(link)
+  end
   if Time.now - $last_write_time2 > UPDATE_DURATION
     save_archives(path)
     $last_write_time2 = Time.now
@@ -180,6 +196,13 @@ def save_archives(path)
   cache = $archives
   sorted_cache = cache.sort_by { |path, _obj| path }.to_h
   File.write(path, Oj.dump(sorted_cache))
+end
+
+def invalidate_obsolete_archives(obsolete_archives, path)
+  obsolete_archives.each do |obsolete_archive|
+    update_archive_cache(obsolete_archive, nil, path)
+  end
+  save_archives(path) if !obsolete_archives.empty?
 end
 
 def check_profile_cache(username)
@@ -199,7 +222,11 @@ end
 def update_cache(username, profile, path)
   now = Time.now
   fuzzed_last_modified = now - rand(now - $last_run[path])
-  $profiles[username] = {LAST_MODIFIED => fuzzed_last_modified, PROFILE => profile}
+  if profile
+    $profiles[username] = {LAST_MODIFIED => fuzzed_last_modified, PROFILE => profile}
+  else
+    $profiles.delete(username)
+  end
   if Time.now - $last_write_time > UPDATE_DURATION
     save_profiles(path)
     $last_write_time = Time.now
@@ -266,7 +293,7 @@ def trim_games(username, games)
 end
 
 # TODO separate getting profile info and filtering cheaters
-def get_profile(username, message)
+def get_profile(username, obsolete_archives, archive_links, message)
   cached_profile = check_profile_cache(username)
   return cached_profile if cached_profile
   puts message
@@ -277,16 +304,22 @@ def get_profile(username, message)
     puts "retrying request"
     response = HTTParty.get(PROFILE_PATH % {username: username})
   end
-  if !response.ok?
+  if response.not_found?
+    puts "#{username} has changed their name, marking #{archive_links} as obsolete"
+    obsolete_archives.merge(archive_links)
+    return update_cache(username, nil, PROFILE_SAVE_FILE)
+    # exit(0)
+  elsif !response.ok?
     puts response
     raise "Error getting profile for \"#{username}\" (#{response.code})"
   end
   update_cache(username, response.parsed_response, PROFILE_SAVE_FILE)
 end
 
-def check_cheater(player, index, total_links)
+def check_cheater(player, index, total_links, obsolete_archives, archive_links)
   username = player["username"]
-  profile = get_profile(username, "checking #{username} (#{human_number(index)} / #{human_number(total_links)}) for cheating")
+  profile = get_profile(username, obsolete_archives, archive_links, "checking #{username} (#{human_number(index)} / #{human_number(total_links)}) for cheating")
+  return false if profile.nil? # profile is nil if they changed their username and we're checking the old one
   profile["status"] == CHEATER_STATUS
   # true # DEBUG
 end
@@ -328,7 +361,7 @@ def print_games(username, games, total_game_count, analyzed_games_count, unique_
 end
 
 def print_game(game, index, total_games)
-  cheater_profile = get_profile(game["opponent"]["username"], "")
+  cheater_profile = check_profile_cache(game["opponent"]["username"])
   puts "#{human_number(index)}: (#{human_date(game["end_time"])}) (#{human_time_control(game["time_class"], game["time_control"])}): #{player_string(game["you"])} vs #{player_string(game["opponent"])} (Banned: #{human_date(cheater_profile["last_online"])}): #{game["url"]}"
 end
 
