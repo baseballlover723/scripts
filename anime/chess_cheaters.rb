@@ -142,7 +142,7 @@ def main(username, rules)
       GC.start
     end
     numb_cheaters, cheated_games = games_by_username.
-      filter.with_index { |(human_username, games), index| check_cheater(games.first["opponent"], index + 1, unique_opponents, obsolete_archives, games.map { |g| g["archive_link"] }) }.
+      filter.with_index { |(human_username, games), index| check_cheater(username, games.first["opponent"], index + 1, unique_opponents, obsolete_archives, games.map { |g| g["archive_link"] }) }.
       reduce([0, []]) { |array, (username, games)|
         array[0] += 1
         array[1].concat(games)
@@ -316,9 +316,9 @@ def get_profile(username, obsolete_archives, archive_links, message)
   update_cache(username, response.parsed_response, PROFILE_SAVE_FILE)
 end
 
-def check_cheater(player, index, total_links, obsolete_archives, archive_links)
-  username = player["username"]
-  profile = get_profile(username, obsolete_archives, archive_links, "checking #{username} (#{human_number(index)} / #{human_number(total_links)}) for cheating")
+def check_cheater(username, player, index, total_links, obsolete_archives, archive_links)
+  opponent_username = player["username"]
+  profile = get_profile(opponent_username, obsolete_archives, archive_links, "(#{username}) checking #{opponent_username} (#{human_number(index)} / #{human_number(total_links)}) for cheating")
   return false if profile.nil? # profile is nil if they changed their username and we're checking the old one
   profile["status"] == CHEATER_STATUS
   # true # DEBUG
