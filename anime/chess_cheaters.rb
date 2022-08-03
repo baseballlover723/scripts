@@ -19,6 +19,7 @@ CACHE_LIFETIME = 15 * 24 * 60 * 60 # seconds
 $last_write_time = Time.now
 $last_write_time2 = Time.now
 UPDATE_DURATION = 30 # seconds
+RENAME_LOOPS = 3
 MAX_PROFILE_ATTEMPTS = 5
 LAST_MODIFIED = "last_modified".freeze
 ARCHIVE = "archive".freeze
@@ -106,7 +107,7 @@ def main(username, rules)
   puts "\nchecking #{username} for cheater opponents with rules: #{rules}"
   obsolete_archives = Set.new
   # loop so that we can retry any archive links that contain obsolete usernames
-  loop do
+  RENAME_LOOPS.times do |_|
     $profiles ||= load_profiles(PROFILE_SAVE_FILE)
     $archives ||= load_archives(ARCHIVE_SAVE_FILE)
     invalidate_obsolete_archives(obsolete_archives, ARCHIVE_SAVE_FILE)
