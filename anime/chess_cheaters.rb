@@ -19,6 +19,7 @@ CACHE_LIFETIME = 15 * 24 * 60 * 60 # seconds
 $last_write_time = Time.now
 $last_write_time2 = Time.now
 UPDATE_DURATION = 30 # seconds
+MAX_PROFILE_ATTEMPTS = 5
 LAST_MODIFIED = "last_modified".freeze
 ARCHIVE = "archive".freeze
 PROFILE = "profile".freeze
@@ -297,12 +298,16 @@ def get_profile(username, obsolete_archives, archive_links, message)
   cached_profile = check_profile_cache(username)
   return cached_profile if cached_profile
   puts message
-  begin
-    response = HTTParty.get(PROFILE_PATH % {username: username})
-  rescue StandardError => e
-    puts e.full_message
-    puts "retrying request"
-    response = HTTParty.get(PROFILE_PATH % {username: username})
+  response = nil
+  MAX_PROFILE_ATTEMPTS.times do |i|
+    begin
+      response = HTTParty.get(PROFILE_PATH % {username: username})
+      break
+    rescue StandardError => e
+      raise if (i + 1) >= MAX_PROFILE_ATTEMPTS
+      puts e.full_message
+      puts "retrying request #{i + 2} / #{MAX_PROFILE_ATTEMPTS}"
+    end
   end
   if response.not_found?
     puts "#{username} has changed their name, marking #{archive_links} as obsolete"
