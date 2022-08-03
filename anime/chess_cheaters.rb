@@ -408,6 +408,7 @@ end
 def save_last_run(path)
   cache = $last_run
   sorted_cache = cache.sort_by { |path, _obj| path }.to_h
+  Oj::Rails.mimic_JSON
   File.write(path, Oj.generate(sorted_cache))
 end
 
