@@ -1,5 +1,5 @@
 $start = Time.now
-require 'digest'
+require 'openssl'
 require_relative './cache'
 require 'active_support'
 require 'active_support/number_helper'
@@ -26,7 +26,7 @@ FILTER = /Naruto/
 CACHE_PATH = 'moviess.cache.json'
 CACHE_REFRESH = 30 # seconds
 PRINT_REFRESH = 1 / 60.0 # seconds
-DIGEST_ALGO = Digest::SHA256
+DIGEST_ALGO = OpenSSL::Digest::SHA256
 SHOW_SEMAPHORE = Mutex.new
 ERROR_THRESHOLD = 5000
 
