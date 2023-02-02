@@ -1,3 +1,4 @@
+require 'concurrent'
 require 'colorize'
 require 'active_support'
 require 'active_support/number_helper'
