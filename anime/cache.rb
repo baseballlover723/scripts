@@ -46,7 +46,9 @@ class BaseCache
       @write_semaphore.synchronize do
         @modified_cache = false
         sorted_cache = cache.sort_by { |path, _obj| path }.to_h
-        File.write(@path, JSON.generate(sorted_cache))
+        tmp_path = @path.split(".").insert(1, "tmp").join(".")
+        File.write(tmp_path, JSON.generate(sorted_cache))
+        File.rename(tmp_path, @path)
       end
     end
     @last_write_time = Time.now
