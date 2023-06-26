@@ -4,6 +4,7 @@ if ARGV.empty?
   require 'colorize'
 end
 
+REMOTE = true
 PATH_TYPES = [:remote_path, :local_path, :local_watched_path, :external_path, :external_watched_path, :long_external_path, :long_external_watched_path]
 
 class Show < BaseShow
@@ -61,7 +62,7 @@ class Script < BaseScript
   end
 
   def rename_results
-    remote_ssh do |ssh|
+    remote_ssh(REMOTE) do |ssh|
       results.each_value do |show|
         if BaseScript.yesno("rename \"#{show.name.light_red}\": #{show.seasons.values.map(&:name).to_s.light_red}\n-> \"#{show.new_name.light_green}\": #{show.seasons.values.map(&:new_name).to_s.light_green}")
           show.seasons.values.each do |season|
@@ -89,14 +90,15 @@ class Script < BaseScript
   end
 
   def remote_rename(ssh, old_path, new_path)
-    # ssh.exec!("mv \"#{old_path}\" \"#{new_path}\"")
+    return if ssh.nil?
+    ssh.exec!("mv \"#{old_path}\" \"#{new_path}\"")
   end
 end
 
 def main
   script = Script.new
 
-  script.remotely_iterate("/entertainment/anime")
+  script.remotely_iterate("/entertainment/anime") if REMOTE
   script.iterate '/mnt/d/anime'
   script.iterate '/mnt/d/anime/zWatched'
   script.iterate '/mnt/g/anime'

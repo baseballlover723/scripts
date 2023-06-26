@@ -76,9 +76,13 @@ class BaseScript
     end
   end
 
-  def remote_ssh
-    Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
-      yield ssh
+  def remote_ssh(remote = true)
+    if remote
+      Net::SSH.start(ENV['OVERMIND_HOST'], ENV['OVERMIND_USER'], password: ENV['OVERMIND_PASSWORD'], timeout: 1, port: 666) do |ssh|
+        yield ssh
+      end
+    else
+      yield nil
     end
   end
 
