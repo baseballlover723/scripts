@@ -1,49 +1,104 @@
-require 'sys/filesystem'
+require 'fileutils'
+require 'colorize'
 require 'active_support'
 require 'active_support/number_helper'
 
-ANIME_PATH = "/mnt/g"
-LONG_PATH = "/mnt/f"
+SHORT_PATH = '/mnt/g/anime'
+LONG_PATH = '/mnt/f/anime'
+LIMIT = 1024 * 1024 * 1024 * 18
+OPTS = {encoding: 'UTF-8'}
 
-def main
-  stat_anime = Sys::Filesystem.stat(ANIME_PATH)
-  stat_long = Sys::Filesystem.stat(LONG_PATH)
+class Anime
+  attr_accessor :name, :bytes
 
-  cap_anime = total(stat_anime)
-  cap_long = total(stat_long)
-  cap_total = cap_anime + cap_long
-  ratio_anime = cap_anime / cap_total
-  ratio_long = cap_long / cap_total
+  def initialize(name, bytes)
+    @name = name
+    @bytes = bytes
+  end
 
-  free_anime = free(stat_anime)
-  free_long = free(stat_long)
-  free_total = free_anime + free_long
+  def size
+    ActiveSupport::NumberHelper.number_to_human_size(@bytes, {precision: 5, strip_insignificant_zeros: false})
+  end
 
-  ideal_free_anime = free_total * ratio_anime
-  ideal_free_long = free_total * ratio_long
-
-
-  puts "ideal_free_anime: #{human_size(ideal_free_anime)}"
-  puts "ideal_free_long: #{human_size(ideal_free_long)}"
-
-  move = ideal_free_anime - free_anime
-  if move > 0
-    puts "move #{human_size(move)} from anime to long"
-  else
-    puts "move #{human_size(-move)} from long to anime"
+  def to_s
+    "#{@name.cyan}: #{size}"
   end
 end
 
-def total(stat)
-  stat.block_size * stat.blocks.to_f
+def main
+  short_results = iterate_drive(SHORT_PATH, true)
+  long_results = iterate_drive(LONG_PATH, false)
+  print "\r".ljust(120)
+  print "\r"
+
+  puts "LIMIT: #{ActiveSupport::NumberHelper.number_to_human_size(LIMIT).green}"
+  print_results(short_results, true)
+  puts
+  print_results(long_results, false)
 end
 
-def free(stat)
-  stat.block_size * stat.blocks_available.to_f
+def iterate_drive(path, short)
+  results = []
+  show_cache = {}
+  iterate(path, results, show_cache, short)
+  iterate(path + '/zWatched', results, show_cache, short)
+  results
 end
 
-def human_size(size)
-  ActiveSupport::NumberHelper.number_to_human_size(size, {precision: 5, strip_insignificant_zeros: false})
+def iterate(path, results, show_cache, short)
+  return unless File.directory?(path)
+  shows = Dir.entries path, **OPTS
+  shows.each do |show|
+    next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini' || show == 'format.txt'
+    calculate_size results, show_cache, path, show, short
+  end
 end
 
+def directory_size(path)
+  raise RuntimeError, "#{path} is not a directory" unless File.directory?(path)
+
+  total_size = 0
+  entries = Dir.entries path, **OPTS
+  entries.each do |f|
+    next if f == '.' || f == '..' || f == 'zWatched' || f == 'desktop.ini'
+    f = "#{path}/#{f}"
+    total_size += File.size(f) if File.file?(f) && File.size?(f)
+    total_size += directory_size f if File.directory? f
+  end
+  total_size
+end
+
+def calculate_size(results, show_cache, path, show, short)
+  print "\rcalculating size for #{short ? "short" : "long"} #{show}".ljust(120)
+  size = directory_size "#{path}/#{show}"
+  if show_cache.include? show
+    anime = show_cache[show]
+    anime.bytes += size
+  else
+    anime = Anime.new(show, size)
+    results << anime
+    show_cache[anime.name] = anime
+  end
+end
+
+def print_results(results, short)
+  results.sort_by!(&:bytes)
+  results.reverse! if !short
+  # results.sort_by!(&:name)
+
+  puts "#{short ? "short" : "long"} -> #{short ? "long" : "short"}"
+  puts
+
+  total = 0
+  results.each do |result|
+    next if (short && result.bytes < LIMIT) || (!short && result.bytes > LIMIT)
+    puts result unless result.bytes == 0
+    total += result.bytes
+  end
+  a = Anime.new("total #{short ? "short" : "long"}", total)
+  puts a
+end
+
+start = Time.now
 main
+puts "Took #{Time.now - start} seconds"
