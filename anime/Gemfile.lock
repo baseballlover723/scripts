@@ -30,7 +30,6 @@ GEM
       mime-types-data (~> 3.2015)
     mime-types-data (3.2023.0808)
     mini_mime (1.1.5)
-    mini_portile2 (2.8.4)
     minitest (5.20.0)
     multi_xml (0.6.0)
     net-scp (4.0.0)
@@ -38,8 +37,7 @@ GEM
     net-sftp (4.0.0)
       net-ssh (>= 5.0.0, < 8.0.0)
     net-ssh (7.2.0)
-    nokogiri (1.15.4)
-      mini_portile2 (~> 2.8.2)
+    nokogiri (1.15.4-x86_64-linux)
       racc (~> 1.4)
     oj (3.16.1)
     openssl (3.1.0)
@@ -48,13 +46,15 @@ GEM
       coderay (~> 1.1)
       method_source (~> 1.0)
     racc (1.7.1)
+    sys-filesystem (1.4.4)
+      ffi (~> 1.1)
     terminal-size (0.0.6)
     tty-cursor (0.7.1)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
 
 PLATFORMS
-  ruby
+  x86_64-linux
 
 DEPENDENCIES
   activesupport (~> 7.0)
@@ -80,6 +80,7 @@ DEPENDENCIES
   openssl (~> 3.0)
   parallel (~> 1.23)
   pry
+  sys-filesystem (~> 1.4.4)
   terminal-size (~> 0.0.6)
   tty-cursor (~> 0.7.1)
 
