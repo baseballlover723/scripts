@@ -3,8 +3,10 @@ require 'colorize'
 require 'active_support'
 require 'active_support/number_helper'
 
-PATH = '/mnt/d/anime'
-# PATH = '/mnt/g/anime'
+# PATH = '/mnt/d/anime'
+PATH = '/mnt/g/anime'
+# PATH = '/mnt/e/movies'
+# PATH = '/mnt/e/tv'
 # PATH = '/entertainment/tv'
 OPTS = {encoding: 'UTF-8'}
 SHOWS = {}
@@ -12,6 +14,7 @@ RESULTS = []
 
 class Anime
   attr_accessor :name, :bytes
+
   def initialize(name, bytes)
     @name = name
     @bytes = bytes
@@ -27,18 +30,25 @@ class Anime
 end
 
 def main
-  shows = Dir.entries PATH, **OPTS
+  iterate(PATH)
+  iterate(PATH + '/zWatched')
+end
+
+def iterate(path)
+  return unless File.directory?(path)
+  shows = Dir.entries path, **OPTS
   shows.each do |show|
     next if show == '.' || show == '..' || show == 'zWatched' || show == 'desktop.ini' || show == 'format.txt'
-    calculate_size show
+    if path.include?("movies")
+      if show_group?(show)
+        iterate(path + '/' + show)
+      else
+        calculate_size path, show
+      end
+    else
+      calculate_size path, show
+    end
   end
-  PATH << '/zWatched'
-  watched_shows = Dir.entries PATH, **OPTS
-  watched_shows.each do |show|
-    next if show == '.' || show == '..' || show == 'desktop.ini'
-    calculate_size show
-  end
-
 end
 
 def directory_size(path)
@@ -61,14 +71,15 @@ def directory_size(path)
   end
   total_size
 end
+
 # f: 26.mp4
 # basename: Season 2 (Dark Tournament Saga)
 # path: /mnt/d/anime/Yu Yu Hakusho; Ghost Files/Season 2 (Dark Tournament Saga)
 # /mnt/d/anime/Yu Yu Hakusho; Ghost Files/Season 2 (Dark Tournament Saga)/26.mp4
 
-def calculate_size(show)
+def calculate_size(path, show)
   print "\rcalculating size for #{show}".ljust(120)
-  size = directory_size "#{PATH}/#{show}"
+  size = directory_size "#{path}/#{show}"
   if SHOWS.include? show
     anime = SHOWS[show]
     anime.bytes += size
@@ -79,23 +90,31 @@ def calculate_size(show)
   end
 end
 
+def show_group?(name)
+  # matches (####) [####.]
+  !name.match /\(\d{4}\) \[\d+.\]/
+end
+
 start = Time.now
 main
 RESULTS.sort_by(&:name)
-File.open('./anime.log', 'w') do |file|
-  RESULTS.each do |anime|
-    file.puts(anime.name)
-  end
-end
+# File.open('./anime.log', 'w') do |file|
+#   RESULTS.each do |anime|
+#     file.puts(anime.name)
+#   end
+# end
 # RESULTS.sort_by!(&:bytes).reverse!
-RESULTS.sort_by!(&:name)
+RESULTS.sort_by!(&:bytes)
+# RESULTS.sort_by!(&:name)
 print "\r".ljust(120)
 print "\r"
 total = 0
 RESULTS.each do |result|
-  next if result.bytes < 1024 * 1024 * 1024 * 25
-  # next if result.name.include? 'x265'
-  # next if result.name.include? '1080p'
+  next if result.bytes < 1024 * 1024 * 1024 * 20
+  # next if result.name.include?('x265')
+  # next if result.name.include?('1080p') || result.name.include?('2160p')
+  # next unless result.name.include?('1080p')
+  # next unless result.name.include?('2160p')
   puts result unless result.bytes == 0
   total += result.bytes
 end
