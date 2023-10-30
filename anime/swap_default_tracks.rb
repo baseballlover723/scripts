@@ -56,7 +56,7 @@ def iterate(path)
   files = []
   entries.each do |entry|
     next if entry == '.' || entry == '..' || entry == 'desktop.ini'
-    next if entry.end_with? '.enc'
+    next if entry.end_with?('.enc') || entry.end_with?('.meta')
     files.push entry
     yield entry if block_given?
     # break
