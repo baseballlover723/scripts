@@ -39,7 +39,7 @@ def process_videos(page_uri, videos, name, query, last)
     extracted, filename = extract_filename(name, video["title"])
     !extracted || compare(last, filename) <= 0
   end.select do |video|
-    video["title"].downcase.include?(query)
+    video["title"].downcase.gsub(/[^0-9A-Za-z\s]/, '').include?(query)
   end
   Parallel.map(videos, in_threads: 8) do |video|
     _, filename = extract_filename(name, video["title"])
