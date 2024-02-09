@@ -10,7 +10,7 @@ def main(page_url, query, name, last)
   page_uri = URI(page_url)
 
   videos = search(page_uri, query, name, last)
-  urls = process_videos(page_uri, videos, name, query, last)
+  urls = process_videos(page_uri, videos, name, query.gsub(/[^0-9A-Za-z\s]/, ''), last)
 
   puts "\n**************************\n\n"
   urls.each do |url|
@@ -136,6 +136,8 @@ def extract_filename(name, str)
   elsif str[/\d+\s*-\s*\d+/]
     numbs.unshift(1) if numbs.size == 1
     numbs << str[/\d+\s*-\s*\d+/].split("-").map(&:strip).map(&:to_i)[-1]
+  elsif str[/\d+\s*x\s*\d+/]
+    numbs << str[/\d+\s*x\s*\d+/].split("x").map(&:strip).map(&:to_i)[-1]
   else
     numbs.unshift(1) if numbs.size == 1
   end
