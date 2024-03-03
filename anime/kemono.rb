@@ -39,9 +39,10 @@ def process_videos(page_uri, videos, name, query, last)
     extracted, filename = extract_filename(name, video["title"])
     !extracted || compare(last, filename) <= 0
   end.select do |video|
-    video["title"].downcase.gsub(/[^0-9A-Za-z\s]/, '').include?(query)
+    video["title"].downcase.gsub(/[^0-9A-Za-z\s]/, '').include?(query) && !(video["file"].empty? && video["embed"])
   end
   Parallel.map(videos, in_threads: 8) do |video|
+  # videos.map do |video|
     _, filename = extract_filename(name, video["title"])
     filename = filename.strip
     puts "video: #{video["title"]}, filename: #{filename}"
@@ -128,6 +129,7 @@ def extract_s_link(url)
 end
 
 def extract_filename(name, str)
+  return [false, str] if str.downcase.include?("opening") || str.downcase.include?("ending")
   numbs = str.split(" ").map do |s|
     s.match?(/\d/) ? s[/\d+/].to_i : nil
   end.compact
