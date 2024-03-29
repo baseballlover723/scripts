@@ -27,7 +27,7 @@ def search(page_uri, query, name, last)
   while true
     page = HTTParty.get(page_uri, query: {q: query, o: offset}).parsed_response
     videos.concat(page)
-    break if page.size < 50 || compare(last, get_last_filename(name, page)) <= 0
+    break if page.size < 50 || compare(last, get_last_filename(name, page, query)) <= 0
     offset += 50
   end
 
@@ -37,11 +37,12 @@ end
 def process_videos(page_uri, videos, name, query, last)
   videos = videos.reverse.drop_while do |video|
     extracted, filename = extract_filename(name, video["title"])
-    !extracted || compare(last, filename) <= 0
+    !extracted || !video["title"].downcase.gsub(/[^0-9A-Za-z\s]/, '').include?(query) || compare(last, filename) <= 0
   end.select do |video|
     video["title"].downcase.gsub(/[^0-9A-Za-z\s]/, '').include?(query) && !(video["file"].empty? && video["embed"])
   end
-  Parallel.map(videos, in_threads: 8) do |video|
+  # Parallel.map(videos, in_threads: 8) do |video|
+  Parallel.map(videos, in_threads: 4) do |video|
   # videos.map do |video|
     _, filename = extract_filename(name, video["title"])
     filename = filename.strip
@@ -75,9 +76,10 @@ def compare(last, filename)
   number <=> last
 end
 
-def get_last_filename(name, page)
+def get_last_filename(name, page, query)
   page.reverse_each do |video|
     extracted, filename = extract_filename(name, video["title"])
+    next if !video["title"].downcase.gsub(/[^0-9A-Za-z\s]/, '').include?(query)
     return filename if extracted
   end
 end
