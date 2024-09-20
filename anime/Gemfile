@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 source "https://rubygems.org"
 
-ruby '~> 3.3.4'
+# ruby '~> 3.3.4'
 # git_source(:github) {|repo_name| "https://github.com/#{repo_name}" }
 
 gem 'dotenv', '~> 3.1'
@@ -14,7 +14,7 @@ gem 'colorize', '~> 1.1'
 gem 'activesupport', '~> 7.0'
 gem 'httparty', '~> 0.21'
 gem 'nokogiri', '~> 1.16.2'
-gem 'highline', '~> 3.0.0'
+gem 'highline', '~> 3.1.1'
 gem 'pry'
 gem 'parallel', '~> 1.23'
 gem 'differ'
@@ -29,4 +29,4 @@ gem 'ffi', '~> 1.15'
 gem 'oj', '~> 3.15'
 gem 'openssl', '~> 3.0'
 gem 'mime-types', '~> 3.4'
-gem 'sys-filesystem', '~> 1.4.4'
+gem 'sys-filesystem', '~> 1.5.0'
