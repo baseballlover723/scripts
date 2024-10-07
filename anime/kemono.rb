@@ -1,16 +1,19 @@
+require 'dotenv/load'
 require 'httparty'
 require 'parallel'
+
+DEFAULT_OPTIONS = {reverse_numbs: false, gallery_dl: false}
 
 NAME = ""
 QUERY = ""
 PAGE_URL = ""
 LAST = ""
 
-def main(page_url, query, name, last)
+def main(page_url, query, name, last, options)
   page_uri = URI(page_url)
 
-  videos = search(page_uri, query, name, last)
-  urls = process_videos(page_uri, videos, name, query.gsub(/[^0-9A-Za-z\s]/, ''), last)
+  videos = options[:gallery_dl] ? search_gallery_dl(query, name, last, options) : search(page_uri, query, name, last, options)
+  urls = process_videos(page_uri, videos, name, query.gsub(/[^0-9A-Za-z\s]/, ''), last, options)
 
   puts "\n**************************\n\n"
   urls.each do |url|
@@ -19,7 +22,20 @@ def main(page_url, query, name, last)
   puts "\n**************************\n\n"
 end
 
-def search(page_uri, query, name, last)
+def search_gallery_dl(query, name, last, options)
+  gallery_dl_dir = ENV["GALLERY_DL"]
+  Dir.entries(gallery_dl_dir)
+     .select { |info_filename| info_filename.end_with?('.m3u8') }
+     .select { |info_filename| info_filename.downcase.gsub(/[^0-9A-Za-z\s]/, '').include?(query) }
+     .sort
+     .reverse
+     .map do |info_filename|
+    infos = File.basename(info_filename, File.extname(info_filename)).split("$$")
+    {"title" => infos[1], "file" => {"path" => File.join(gallery_dl_dir, info_filename)}}
+  end
+end
+
+def search(page_uri, query, name, last, options)
   page_uri.path = "/api/v1" + page_uri.path
 
   videos = []
@@ -27,24 +43,25 @@ def search(page_uri, query, name, last)
   while true
     page = HTTParty.get(page_uri, query: {q: query, o: offset}).parsed_response
     videos.concat(page)
-    break if page.size < 50 || compare(last, get_last_filename(name, page, query)) <= 0
+    break if page.size < 50 || compare(last, get_last_filename(name, page, query, options)) <= 0
     offset += 50
   end
 
   videos
 end
 
-def process_videos(page_uri, videos, name, query, last)
+def process_videos(page_uri, videos, name, query, last, options)
   videos = videos.reverse.drop_while do |video|
-    extracted, filename = extract_filename(name, video["title"])
-    !extracted || !video["title"].downcase.gsub(/[^0-9A-Za-z\s]/, '').include?(query) || compare(last, filename) <= 0
+    extracted, filename = extract_filename(name, video["title"], options)
+    puts "extracted: #{extracted}, filename: #{filename}, title: #{video["title"]}"
+    !extracted || !video["title"].downcase.gsub(/[^0-9A-Za-z\s]/, '').include?(query) || compare(last, filename) <= 0 || video["title"].downcase.include?("code")
   end.select do |video|
-    video["title"].downcase.gsub(/[^0-9A-Za-z\s]/, '').include?(query) && !(video["file"].empty? && video["embed"])
+    video["title"].downcase.gsub(/[^0-9A-Za-z\s]/, '').include?(query) #&& !(!video["file"].empty? && video["embed"])
   end
   # Parallel.map(videos, in_threads: 8) do |video|
   Parallel.map(videos, in_threads: 4) do |video|
-  # videos.map do |video|
-    _, filename = extract_filename(name, video["title"])
+    # videos.map do |video|
+    _, filename = extract_filename(name, video["title"], options)
     filename = filename.strip
     puts "video: #{video["title"]}, filename: #{filename}"
     extract_link(page_uri, video, filename)
@@ -52,8 +69,12 @@ def process_videos(page_uri, videos, name, query, last)
 end
 
 def extract_link(page_uri, video, filename)
-  url, res = if !video["file"].empty? && video["file"]["path"].end_with?(".txt")
-               extract_k_link(page_uri, video["file"]["path"])
+  url, res = if !video["file"].empty?
+               if video["file"]["path"].end_with?(".txt")
+                 extract_k_link(page_uri, video["file"]["path"])
+               elsif video["file"]["path"].end_with?(".m3u8")
+                 extract_local_link(video["file"]["path"])
+               end
              else
                if video["embed"]["url"].include?("google")
                  extract_g_link(video["embed"]["url"])
@@ -76,9 +97,9 @@ def compare(last, filename)
   number <=> last
 end
 
-def get_last_filename(name, page, query)
+def get_last_filename(name, page, query, options)
   page.reverse_each do |video|
-    extracted, filename = extract_filename(name, video["title"])
+    extracted, filename = extract_filename(name, video["title"], options)
     next if !video["title"].downcase.gsub(/[^0-9A-Za-z\s]/, '').include?(query)
     return filename if extracted
   end
@@ -88,11 +109,19 @@ def extract_g_link(url)
   [url, "drive"]
 end
 
+def extract_local_link(path)
+  extract_m3u8(File.read(path).split("\n"))
+end
+
 def extract_k_link(uri, path)
   uri = uri.clone
   uri.path = path
   res = HTTParty.get(uri)
-  lines = res.body.split("\n").drop_while do |line|
+  extract_m3u8(res.body.split("\n"))
+end
+
+def extract_m3u8(lines)
+  lines = lines.drop_while do |line|
     !line.start_with?("#EXT-X-STREAM-INF")
   end
 
@@ -130,18 +159,24 @@ def extract_s_link(url)
   [url, res.to_s + "p"]
 end
 
-def extract_filename(name, str)
+def extract_filename(name, str, options)
   return [false, str] if str.downcase.include?("opening") || str.downcase.include?("ending")
+  str.gsub!('\s+-\s+', '-')
+  str.gsub!('\s+x\s+', 'x')
   numbs = str.split(" ").map do |s|
     s.match?(/\d/) ? s[/\d+/].to_i : nil
   end.compact
+  if options[:reverse_numbs]
+    numbs.unshift(numbs.pop)
+  end
+
   if str.downcase.include?(" and ")
     numbs.unshift(1) if numbs.size == 2
-  elsif str[/\d+\s*-\s*\d+/]
+  elsif str[/\d+-\d+/]
     numbs.unshift(1) if numbs.size == 1
-    numbs << str[/\d+\s*-\s*\d+/].split("-").map(&:strip).map(&:to_i)[-1]
-  elsif str[/\d+\s*x\s*\d+/]
-    numbs << str[/\d+\s*x\s*\d+/].split("x").map(&:strip).map(&:to_i)[-1]
+    numbs << str[/\d+-\d+/].split("-").map(&:strip).map(&:to_i)[-1]
+  elsif str[/\d+x\d+/]
+    numbs << str[/\d+x\d+/].split("x").map(&:strip).map(&:to_i)[-1]
   else
     numbs.unshift(1) if numbs.size == 1
   end
@@ -164,4 +199,4 @@ def name(numbs)
   name
 end
 
-main(PAGE_URL, QUERY, NAME, LAST)
+main(PAGE_URL, QUERY, NAME, LAST, DEFAULT_OPTIONS.merge(defined?(OPTIONS) ? OPTIONS : {}))
